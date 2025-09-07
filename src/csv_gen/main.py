@@ -1,10 +1,17 @@
 import csv
+import logging
 import multiprocessing as mp
 import os
 import secrets
 import string
+import sys
 from pathlib import Path
 from typing import Final
+
+from loguru import logger
+
+logger.remove()
+logger.add(sys.stderr, level=logging.DEBUG)
 
 
 # ---------- Helpers ----------
@@ -48,12 +55,12 @@ def main() -> None:
     header = ["id", "name", "value1", "value2", "value3"]
 
     # Estimate rows needed
-    test_file = "test_chunk.csv"
-    worker(0, 10_000, test_file, header)
-    avg_row_size = os.path.getsize(test_file) / 10_000
-    os.remove(test_file)
+    TEST_FILE: Final[Path] = Path("test_chunk.csv")
+    worker(0, 10_000, TEST_FILE, header)
+    avg_row_size = TEST_FILE.stat().st_size / 10_000
+    TEST_FILE.unlink()
     est_rows = int(TARGET_SIZE / avg_row_size)
-    print(
+    logger.info(
         f"Need about {est_rows:,} rows (~{TARGET_SIZE / (1024**3):.2f} GB target)"
     )
 
