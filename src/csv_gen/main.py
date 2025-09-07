@@ -1,7 +1,6 @@
 import csv
 import logging
 import multiprocessing as mp
-import os
 import secrets
 import string
 import sys
@@ -56,7 +55,7 @@ def main() -> None:
 
     # Estimate rows needed
     TEST_FILE: Final[Path] = Path("test_chunk.csv")
-    worker(0, 10_000, TEST_FILE, header)
+    worker(0, 10_000, str(TEST_FILE), header)
     avg_row_size = TEST_FILE.stat().st_size / 10_000
     TEST_FILE.unlink()
     est_rows = int(TARGET_SIZE / avg_row_size)
@@ -81,18 +80,20 @@ def main() -> None:
         p.join()
 
     # Merge files
-    with open(FILENAME, "w", newline="", buffering=1024 * 1024) as out:
+    with Path(FILENAME).open(
+        "w", newline="", buffering=1024 * 1024, encoding="utf-8"
+    ) as out:
         out.write(",".join(header) + "\n")
         for i in range(chunk_id):
-            chunk_file = f"chunk_{i}.csv"
-            with open(chunk_file, "r", newline="") as f:
+            chunk_file = Path(f"chunk_{i}.csv")
+            with chunk_file.open("r", newline="", encoding="utf-8") as f:
                 next(f)  # skip header
                 for line in f:
                     out.write(line)
-            os.remove(chunk_file)
+            chunk_file.unlink()
 
-    size_gb = os.path.getsize(FILENAME) / (1024**3)
-    print(f"Generated {FILENAME} with size ~{size_gb:.2f} GB")
+    size_gb = Path(FILENAME).stat().st_size / (1024**3)
+    logger.info(f"Generated {FILENAME} with size ~{size_gb:.2f} GB")
 
 
 if __name__ == "__main__":
