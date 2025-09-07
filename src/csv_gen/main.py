@@ -38,7 +38,7 @@ def run_worker(
     with Path(filename).open(
         "w", newline="", buffering=1024 * 1024, encoding="utf-8"
     ) as f:
-        writer = csv.writer(f)
+        writer = csv.writer(f, delimiter=";", quoting=csv.QUOTE_MINIMAL)
         writer.writerow(header)
         for i in range(start_id, start_id + count):
             writer.writerow(make_row(i))
@@ -57,6 +57,7 @@ def main() -> None:
     header = ["id", "name", "value1", "value2", "value3"]
 
     # Estimate rows needed
+    logger.info("Estimating rows needed...")
     TEST_FILE: Final[Path] = Path("test_chunk.csv")
     run_worker(0, 10_000, str(TEST_FILE), header)
     avg_row_size = TEST_FILE.stat().st_size / 10_000
@@ -68,10 +69,13 @@ def main() -> None:
     )
 
     # Launch workers
+    logger.info("Starting CSV generation...")
+    logger.info(f"Launching {NUM_PROCESSES} processes...")
     processes: list[mp.Process] = []
     row_id = 0
     chunk_id = 0
-    while row_id < est_rows:
+    while row_id < est_rows and len(processes) < NUM_PROCESSES:
+        logger.debug(f"Starting chunk: {chunk_id}...")
         count = min(ROWS_PER_CHUNK, est_rows - row_id)
         chunk_file = f"chunk_{chunk_id}.csv"
         p = mp.Process(
@@ -86,6 +90,7 @@ def main() -> None:
         p.join()
 
     # Merge files
+    logger.info("Merging chunk files...")
     with Path(FILENAME).open(
         "w", newline="", buffering=1024 * 1024, encoding="utf-8"
     ) as out:
