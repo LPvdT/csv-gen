@@ -7,7 +7,8 @@ from typing import Final
 
 from loguru import logger
 
-from .utils import run_worker
+from .utils import np as np_utils
+from .utils import python as py_utils
 
 # Configuration
 TARGET_SIZE: Final[int] = 1 * 1024**3  # 1 GB target size
@@ -28,7 +29,7 @@ def main() -> None:
     # Estimate rows needed
     logger.info("Estimating rows needed...")
     TEST_FILE: Final[Path] = Path("test_chunk.csv")
-    run_worker(0, 10_000, str(TEST_FILE), header)
+    py_utils.run_worker(0, 10_000, str(TEST_FILE), header)
     avg_row_size = TEST_FILE.stat().st_size / 10_000
     TEST_FILE.unlink()
 
@@ -48,7 +49,7 @@ def main() -> None:
         count = min(ROWS_PER_CHUNK, est_rows - row_id)
         chunk_file = f"chunk_{chunk_id}.csv"
         p = mp.Process(
-            target=run_worker, args=(row_id, count, chunk_file, header)
+            target=py_utils.run_worker, args=(row_id, count, chunk_file, header)
         )
         processes.append(p)
         p.start()
