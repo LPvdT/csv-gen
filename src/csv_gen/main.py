@@ -3,6 +3,8 @@ import multiprocessing as mp
 import os
 import secrets
 import string
+from pathlib import Path
+from typing import Final
 
 
 # ---------- Helpers ----------
@@ -23,7 +25,10 @@ def make_row(row_id: int) -> list[str | int | float]:
 # ---------- Worker ----------
 def worker(start_id: int, count: int, filename: str, header: list[str]) -> None:
     """Generate rows and write directly to a CSV chunk file."""
-    with open(filename, "w", newline="", buffering=1024 * 1024) as f:
+
+    with Path(filename).open(
+        "w", newline="", buffering=1024 * 1024, encoding="utf-8"
+    ) as f:
         writer = csv.writer(f)
         writer.writerow(header)
         for i in range(start_id, start_id + count):
@@ -31,10 +36,10 @@ def worker(start_id: int, count: int, filename: str, header: list[str]) -> None:
 
 
 # ---------- Main ----------
-TARGET_SIZE = 1 * 1024**3  # 1 GB target size
-FILENAME = "bigfile.csv"
-NUM_PROCESSES = mp.cpu_count()
-ROWS_PER_CHUNK = (
+TARGET_SIZE: Final[int] = 1 * 1024**3  # 1 GB target size
+FILENAME: Final[str] = "bigfile.csv"
+NUM_PROCESSES: Final[int] = mp.cpu_count()
+ROWS_PER_CHUNK: Final[int] = (
     1_000_000  # adjust for balance between chunk size and process count
 )
 
