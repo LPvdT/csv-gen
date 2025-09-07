@@ -14,9 +14,11 @@ def random_words(count: int, length: int) -> np.ndarray:
     'a' = 97, 'z' = 122. Much faster than np.random.choice().
     """
 
-    codes = np.random.randint(97, 123, size=(count, length), dtype=np.uint8)
+    codes = GENERATOR.uniform(97, 123, size=(count, length))
 
-    return np.array([bytes(row).decode("ascii") for row in codes])
+    return np.array([
+        bytes(row).decode("ascii") for row in codes.astype(np.uint8)
+    ])
 
 
 def generate_batch(start_id: int, count: int) -> list[list[str | int | float]]:
