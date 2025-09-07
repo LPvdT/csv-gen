@@ -14,7 +14,7 @@ def random_words(count: int, length: int) -> np.ndarray:
     'a' = 97, 'z' = 122. Much faster than np.random.choice().
     """
 
-    codes = GENERATOR.uniform(97, 123, size=(count, length))
+    codes = GENERATOR.integers(97, 123, size=(count, length))
 
     return np.array([
         bytes(row).decode("ascii") for row in codes.astype(np.uint8)
@@ -25,9 +25,10 @@ def generate_batch(start_id: int, count: int) -> list[list[str | int | float]]:
     """Generate a batch of rows using NumPy RNG (vectorized)."""
 
     ids = np.arange(start_id, start_id + count, dtype=np.int64)
-    values1 = np.random.randint(0, 1_000_001, size=count, dtype=np.int64)
-    values2 = np.random.random(size=count)
     names = random_words(count, 12)
+    values1 = GENERATOR.integers(0, 1_000_001, size=count, dtype=np.int64)
+    values1 = GENERATOR.integers(0, 1_000_001, size=count, dtype=np.int64)
+    values2 = GENERATOR.uniform(size=count)
     values3 = random_words(count, 8)
 
     return list(map(list, zip(ids, names, values1, values2, values3)))
