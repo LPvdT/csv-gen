@@ -2,6 +2,7 @@ import csv
 import logging
 import multiprocessing as mp
 import secrets
+import shutil
 import string
 import sys
 from pathlib import Path
@@ -83,13 +84,12 @@ def main() -> None:
     with Path(FILENAME).open(
         "w", newline="", buffering=1024 * 1024, encoding="utf-8"
     ) as out:
-        out.write(",".join(header) + "\n")
+        out.write(";".join(header) + "\n")
         for i in range(chunk_id):
             chunk_file = Path(f"chunk_{i}.csv")
             with chunk_file.open("r", newline="", encoding="utf-8") as f:
                 next(f)  # skip header
-                for line in f:
-                    out.write(line)
+                shutil.copyfileobj(f, out)
             chunk_file.unlink()
 
     size_gb = Path(FILENAME).stat().st_size / (1024**3)
