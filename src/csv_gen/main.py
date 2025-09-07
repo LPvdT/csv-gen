@@ -9,16 +9,17 @@ from loguru import logger
 
 from .utils import run_worker
 
-logger.remove()
-logger.add(sys.stderr, level=logging.DEBUG)
-
-
+# Configuration
 TARGET_SIZE: Final[int] = 1 * 1024**3  # 1 GB target size
 FILENAME: Final[str] = "bigfile.csv"
 NUM_PROCESSES: Final[int] = mp.cpu_count()
 ROWS_PER_CHUNK: Final[int] = (
     1_000_000  # adjust for balance between chunk size and process count
 )
+
+# Setup logging
+logger.remove()
+logger.add(sys.stderr, level=logging.DEBUG)
 
 
 def main() -> None:
