@@ -1,28 +1,27 @@
 import csv
 import multiprocessing as mp
 import os
-import random
+import secrets
 import string
-from typing import List
 
 
 # ---------- Helpers ----------
 def random_word(length: int = 10) -> str:
-    return "".join(random.choices(string.ascii_lowercase, k=length))
+    return "".join(secrets.choice(string.ascii_letters) for _ in range(length))
 
 
-def make_row(row_id: int) -> List[str | int | float]:
+def make_row(row_id: int) -> list[str | int | float]:
     return [
         row_id,
         random_word(12),
-        random.randint(0, 1_000_000),
-        random.random(),
+        secrets.randbelow(1_000_000),
+        secrets.randbelow(1_000_000) / 100,
         random_word(8),
     ]
 
 
 # ---------- Worker ----------
-def worker(start_id: int, count: int, filename: str, header: List[str]) -> None:
+def worker(start_id: int, count: int, filename: str, header: list[str]) -> None:
     """Generate rows and write directly to a CSV chunk file."""
     with open(filename, "w", newline="", buffering=1024 * 1024) as f:
         writer = csv.writer(f)
