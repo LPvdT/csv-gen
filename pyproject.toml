@@ -39,16 +39,6 @@ test = [
 [tool.hatch.version]
 source = "vcs"
 
-[tool.hatch.build.targets.wheel]
-packages = [
-    "src/csv_gen",
-]
-
-[tool.hatch.build.targets.sdist]
-packages = [
-    "src/csv_gen",
-]
-
 [build-system]
 requires = [
     "hatch-vcs",
