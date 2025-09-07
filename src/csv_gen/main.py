@@ -30,7 +30,9 @@ def make_row(row_id: int) -> list[str | int | float]:
 
 
 # ---------- Worker ----------
-def worker(start_id: int, count: int, filename: str, header: list[str]) -> None:
+def run_worker(
+    start_id: int, count: int, filename: str, header: list[str]
+) -> None:
     """Generate rows and write directly to a CSV chunk file."""
 
     with Path(filename).open(
@@ -56,9 +58,10 @@ def main() -> None:
 
     # Estimate rows needed
     TEST_FILE: Final[Path] = Path("test_chunk.csv")
-    worker(0, 10_000, str(TEST_FILE), header)
+    run_worker(0, 10_000, str(TEST_FILE), header)
     avg_row_size = TEST_FILE.stat().st_size / 10_000
     TEST_FILE.unlink()
+
     est_rows = int(TARGET_SIZE / avg_row_size)
     logger.info(
         f"Need about {est_rows:,} rows (~{TARGET_SIZE / (1024**3):.2f} GB target)"
@@ -71,7 +74,9 @@ def main() -> None:
     while row_id < est_rows:
         count = min(ROWS_PER_CHUNK, est_rows - row_id)
         chunk_file = f"chunk_{chunk_id}.csv"
-        p = mp.Process(target=worker, args=(row_id, count, chunk_file, header))
+        p = mp.Process(
+            target=run_worker, args=(row_id, count, chunk_file, header)
+        )
         processes.append(p)
         p.start()
         row_id += count
