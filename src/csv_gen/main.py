@@ -1,7 +1,5 @@
 import functools
-import multiprocessing as mp
 import timeit
-from pathlib import Path
 from typing import Final
 
 from loguru import logger
@@ -10,31 +8,34 @@ from csv_gen.utils.np import main_np
 
 # Configuration
 FILENAME: Final[str] = "bigfile.csv"
+DEFAULT_HEADERS: Final[list[str]] = ["id", "name", "value1", "value2", "value3"]
 
 if __name__ == "__main__":
-    mp.set_start_method("spawn")
-
-    output = Path(FILENAME)
-    if output.exists():
-        output.unlink()
-
     args_base = {
         "filename": FILENAME,
         "header": ["id", "name", "value1", "value2", "value3"],
-        "rows_per_chunk": 250_000,  # Good sweet spot
     }
 
     args_1 = args_base.copy()
     args_1.update({
-        "target_size": 5 * 1024**3,  # 5 GB
+        "target_size": 100 * 1024**2,  # 100 MB
     })
 
     args_2 = args_base.copy()
     args_2.update({
+        "target_size": 5 * 1024**3,  # 5 GB
+    })
+
+    args_3 = args_base.copy()
+    args_3.update({
         "target_size": 25 * 1024**3,  # 25 GB
     })
 
-    np_algo_config_1 = functools.partial(main_np, **args_1)
+    args_3 = args_base.copy()
+    args_3.update({
+        "target_size": 50 * 1024**3,  # 50 GB
+    })
 
-    time_np = timeit.timeit(np_algo_config_1, number=3)
+    np_algo_config_1 = functools.partial(main_np, **args_1)
+    time_np = timeit.timeit(np_algo_config_1, number=1)
     logger.info(f"NumPy: {time_np:.2f} s")
