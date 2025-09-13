@@ -5,6 +5,7 @@ import shutil
 import string
 from pathlib import Path
 from typing import Final
+from warnings import deprecated
 
 from loguru import logger
 
@@ -37,6 +38,10 @@ def run_worker(
             writer.writerow(_make_row(i))
 
 
+@deprecated(
+    "No longer supported. Use csv_gen.utils.np instead.",
+    category=DeprecationWarning,
+)
 def main_py(
     filename: str,
     header: list[str],
