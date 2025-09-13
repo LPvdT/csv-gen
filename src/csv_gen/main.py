@@ -8,6 +8,7 @@ from csv_gen.utils.np import main_np
 
 # Configuration
 FILENAME: Final[str] = "bigfile.csv"
+DEFAULT_HEADERS: Final[list[str]] = ["id", "name", "value1", "value2", "value3"]
 
 if __name__ == "__main__":
     args_base = {
