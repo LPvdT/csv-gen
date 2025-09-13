@@ -26,15 +26,12 @@ def build_rows_numpy(
     values1_str = values1.astype(str)
     values2_str = np.char.mod("%.6f", values2)
 
-    names_str = np.char.decode(names, "ascii")
-    values3_str = np.char.decode(values3, "ascii")
-
     rows = np.char.add(
         np.char.add(
             np.char.add(
                 np.char.add(
                     np.char.add(ids_str, ";"),
-                    names_str,
+                    np.char.decode(names, "ascii"),
                 ),
                 ";",
             ),
@@ -44,10 +41,10 @@ def build_rows_numpy(
     )
     rows = np.char.add(rows, values2_str)
     rows = np.char.add(rows, ";")
-    rows = np.char.add(rows, values3_str)
+    rows = np.char.add(rows, np.char.decode(values3, "ascii"))
     rows = np.char.add(rows, "\n")
 
-    return b"".join(rows.tolist())
+    return b"".join(r.encode("ascii") for r in rows.tolist())
 
 
 def generate_batch(
