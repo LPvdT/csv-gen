@@ -122,5 +122,10 @@ def main_np() -> None:
 
 
 if __name__ == "__main__":
+    output = Path(FILENAME)
+    if output.exists():
+        output.unlink()
+
     mp.set_start_method("spawn")
-    main_py()
+    main_py()  # 80.332s - File is 701MB
+    main_np()  # 18.465s - File is 1.1GGB
