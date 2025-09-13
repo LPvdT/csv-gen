@@ -1,5 +1,4 @@
 import multiprocessing
-import shutil
 from concurrent.futures import Future, ProcessPoolExecutor, as_completed
 from pathlib import Path
 
@@ -11,101 +10,141 @@ GENERATOR = np.random.default_rng()
 
 
 def random_words_bytes(count: int, length: int) -> np.ndarray:
+    """Generate an array of random ASCII byte strings of given length."""
     codes = GENERATOR.integers(97, 123, size=(count, length), dtype=np.uint8)
     return codes.view(f"S{length}").ravel()
 
 
-def build_rows_numpy(
+def build_rows_bytes(
     ids: np.ndarray,
     names: np.ndarray,
     values1: np.ndarray,
     values2: np.ndarray,
     values3: np.ndarray,
 ) -> bytes:
-    ids_str = ids.astype(str)
-    values1_str = values1.astype(str)
-    values2_str = np.char.mod("%.6f", values2)
-
-    names_str = np.char.decode(names, "ascii")
-    values3_str = np.char.decode(values3, "ascii")
-
-    rows = np.char.add(
-        np.char.add(
-            np.char.add(
-                np.char.add(
-                    np.char.add(ids_str, ";"),
-                    names_str,
-                ),
-                ";",
-            ),
-            values1_str,
-        ),
-        ";",
+    """Build CSV rows as a single bytes object using pre-allocated bytearray."""
+    n_rows = len(ids)
+    total_size = sum(
+        len(str(ids[i]))
+        + 1
+        + len(names[i])
+        + 1
+        + len(str(values1[i]))
+        + 1
+        + len(f"{values2[i]:.6f}")
+        + 1
+        + len(values3[i])
+        + 1
+        for i in range(n_rows)
     )
-    rows = np.char.add(rows, values2_str)
-    rows = np.char.add(rows, ";")
-    rows = np.char.add(rows, values3_str)
-    rows = np.char.add(rows, "\n")
 
-    return b"".join(rows.tolist())
+    out = bytearray(total_size)
+    pos = 0
+
+    for i in range(n_rows):
+        for b in str(ids[i]).encode("ascii"):
+            out[pos] = b
+            pos += 1
+        out[pos] = ord(";")
+        pos += 1
+
+        for b in names[i]:
+            out[pos] = b
+            pos += 1
+        out[pos] = ord(";")
+        pos += 1
+
+        for b in str(values1[i]).encode("ascii"):
+            out[pos] = b
+            pos += 1
+        out[pos] = ord(";")
+        pos += 1
+
+        for b in f"{values2[i]:.6f}".encode("ascii"):
+            out[pos] = b
+            pos += 1
+        out[pos] = ord(";")
+        pos += 1
+
+        for b in values3[i]:
+            out[pos] = b
+            pos += 1
+
+        out[pos] = ord("\n")
+        pos += 1
+
+    return bytes(out)
 
 
-def generate_batch(
-    start_id: int, count: int, header: list[str], filename: str
-) -> None:
-    """
-    Worker: generate a CSV chunk with `count` rows starting from `start_id`.
-    """
-
+def generate_chunk_file(start_id: int, count: int, tmp_file: str) -> str:
+    """Generate a chunk of CSV rows directly to a temporary file."""
     ids = np.arange(start_id, start_id + count, dtype=np.int64)
     names = random_words_bytes(count, 12)
     values1 = GENERATOR.integers(0, 1_000_001, size=count, dtype=np.int64)
     values2 = GENERATOR.random(size=count)
     values3 = random_words_bytes(count, 8)
 
-    with Path(filename).open("wb", buffering=1024 * 1024) as f:
-        f.write((";".join(header) + "\n").encode("utf-8"))
-        f.write(build_rows_numpy(ids, names, values1, values2, values3))
+    chunk_bytes = build_rows_bytes(ids, names, values1, values2, values3)
+
+    tmp_path = Path(tmp_file)
+    with tmp_path.open("wb", buffering=1024 * 1024) as f:
+        f.write(chunk_bytes)
+
+    return tmp_file
 
 
-def main_np(  # noqa
+def generate_batch_bytes(start_id: int, count: int) -> bytes:
+    """Generate a batch of CSV rows as bytes (no header), used for correction step."""
+    ids = np.arange(start_id, start_id + count, dtype=np.int64)
+    names = random_words_bytes(count, 12)
+    values1 = GENERATOR.integers(0, 1_000_001, size=count, dtype=np.int64)
+    values2 = GENERATOR.random(size=count)
+    values3 = random_words_bytes(count, 8)
+
+    return build_rows_bytes(ids, names, values1, values2, values3)
+
+
+def main_np(
     filename: str,
     header: list[str],
     target_size: int,
     num_processes: int = multiprocessing.cpu_count(),
     rows_per_chunk: int = 100_000,
 ) -> None:
-    logger.info("🚀 Starting NumPy CSV generation algorithm")
+    """Generate a large CSV by streaming chunks directly to disk (low RAM usage)."""
+    logger.success("🚀 Starting NumPy streaming CSV generation")
 
-    # Estimate average row size
+    # Estimate row size
     logger.info("Estimating row size...")
-    test_file = Path("test_sample.csv")
-    generate_batch(0, 10_000, header, str(test_file))
-    avg_row_size = test_file.stat().st_size / 10_000
-    test_file.unlink()
-
+    test_bytes = build_rows_bytes(
+        np.arange(0, 10_000),
+        random_words_bytes(10_000, 12),
+        np.arange(10_000),
+        GENERATOR.random(size=10_000),
+        random_words_bytes(10_000, 8),
+    )
+    avg_row_size = len(test_bytes) / 10_000
     est_rows = int(target_size / avg_row_size)
     logger.info(
-        f"Estimated rows needed: {est_rows:,} (~{target_size / (1024**3):.2f} GB, avg row {avg_row_size:.1f} bytes)"
+        f"Estimated rows: {est_rows:,} (~{target_size / (1024**3):.2f} GB, avg row {avg_row_size:.1f} bytes)"
     )
 
-    # Schedule chunks
+    # Generate chunks in parallel
     chunk_files: list[str] = []
-    futures: list[Future[None]] = []
+    futures: list[Future[str]] = []
     with ProcessPoolExecutor(max_workers=num_processes) as pool:
         row_id = 0
         chunk_id = 0
         while row_id < est_rows:
             count = min(rows_per_chunk, est_rows - row_id)
-            chunk_file = f"chunk_{chunk_id}.csv"
+            tmp_file = f"chunk_{chunk_id}.csv"
             futures.append(
-                pool.submit(generate_batch, row_id, count, header, chunk_file)
+                pool.submit(generate_chunk_file, row_id, count, tmp_file)
             )
-            chunk_files.append(chunk_file)
+            chunk_files.append(tmp_file)
             row_id += count
             chunk_id += 1
 
-        # Progress bar for generation
         with tqdm(
             total=len(futures), desc="Generating chunks", unit="chunk"
         ) as pbar:
@@ -113,68 +152,52 @@ def main_np(  # noqa
                 future.result()
                 pbar.update(1)
 
-    # Merge chunks
-    logger.info("Merging chunks into final file...")
-    with Path(filename).open("wb", buffering=1024 * 1024) as out:
+    # Merge chunk files into final CSV
+    logger.info("Merging chunk files into final CSV...")
+    final_path = Path(filename)
+    with final_path.open("wb", buffering=1024 * 1024) as out:
         out.write((";".join(header) + "\n").encode("utf-8"))
-        for file in tqdm(chunk_files, desc="Merging chunks", unit="chunk"):
-            with Path(file).open("rb") as f:
-                next(f)  # skip header
-                shutil.copyfileobj(f, out)
-            Path(file).unlink()
+        for tmp_file in tqdm(chunk_files, desc="Merging chunks", unit="chunk"):
+            with Path(tmp_file).open("rb") as f:
+                out.write(f.read())
+            Path(tmp_file).unlink()  # remove temp file immediately
 
-    size = Path(filename).stat().st_size
-    logger.info(f"Generated {filename} with size {size / (1024**3):.2f} GB")
-
-    # Correction step if undersized
+    # Correction step: directly append extra rows to final CSV if undersized
+    size = final_path.stat().st_size
     if size < target_size:
-        logger.info("File undersized, appending rows until target reached...")
-
-        # compute how many rows are missing
+        logger.info(
+            "File undersized, appending extra rows until target reached..."
+        )
         missing_bytes = target_size - size
         est_missing_rows = int(missing_bytes / avg_row_size) + 1
-
-        logger.info(f"Correction needs ~{est_missing_rows:,} rows")
+        row_id = est_rows
 
         with (
-            Path(filename).open("ab", buffering=1024 * 1024) as out,
+            final_path.open("ab", buffering=1024 * 1024) as out,
             tqdm(
                 total=est_missing_rows, desc="Correction step", unit="rows"
             ) as pbar,
         ):
-            row_id = est_rows
             written_rows = 0
             while size < target_size:
                 batch_size = min(
                     rows_per_chunk, est_missing_rows - written_rows
                 )
-
-                ids = np.arange(row_id, row_id + batch_size, dtype=np.int64)
-                names = random_words_bytes(batch_size, 12)
-                values1 = GENERATOR.integers(
-                    0, 1_000_001, size=batch_size, dtype=np.int64
-                )
-                values2 = GENERATOR.random(size=batch_size)
-                values3 = random_words_bytes(batch_size, 8)
-
-                out.write(
-                    build_rows_numpy(ids, names, values1, values2, values3)
-                )
-
+                out.write(generate_batch_bytes(row_id, batch_size))
                 row_id += batch_size
                 written_rows += batch_size
-                size = Path(filename).stat().st_size
+                size = final_path.stat().st_size
                 pbar.update(batch_size)
 
-        # Final trim in case of overshoot
-        if size > target_size:
-            logger.info(
-                f"Overshoot detected ({size - target_size} bytes). Trimming back..."
-            )
-            with Path(filename).open("rb+") as f:
-                f.truncate(target_size)
+    # Final size check: truncate if oversize
+    size = final_path.stat().st_size
+    if size > target_size:
+        logger.info(
+            f"Oversize detected ({(size - target_size) / (1024**2):.2f} MB). Truncating final file..."
+        )
+        with final_path.open("rb+") as f:
+            f.truncate(target_size)
 
-        size = Path(filename).stat().st_size
-        logger.info(f"🎯 Corrected size: {size / (1024**3):.2f} GB (exact)")
-
-    logger.info("✨ Done!")
+    logger.success(
+        f"✨ Done! Final size: {final_path.stat().st_size / (1024**3):.2f} GB"
+    )
