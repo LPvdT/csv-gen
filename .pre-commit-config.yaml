@@ -3,10 +3,10 @@ repos:
     rev: v6.0.0
     hooks:
       - id: trailing-whitespace
-        name: Trailing whitespace
+        name: Trailing Whitespace
 
       - id: end-of-file-fixer
-        name: End of line fixer
+        name: EOL Fixer
 
       - id: check-yaml
         name: Check YAML
@@ -21,16 +21,16 @@ repos:
     rev: v0.13.0
     hooks:
       - id: ruff-check
-        name: Ruff check
+        name: Ruff - Check
         args: [--fix, --config=pyproject.toml, --exit-zero, --unsafe-fixes]
 
       - id: ruff-format
-        name: Ruff format
+        name: Ruff - Format
         args: [--config=pyproject.toml]
 
   - repo: https://github.com/lyz-code/yamlfix
     rev: 1.18.0
     hooks:
       - id: yamlfix
-        name: YAML fix
+        name: YAML Fix
         args: [--config-file=pyproject.toml]
