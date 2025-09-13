@@ -22,17 +22,24 @@ if __name__ == "__main__":
     args = {
         "filename": FILENAME,
         "header": ["id", "name", "value1", "value2", "value3"],
-        "target_size": 1 * 1024**3,  # 1 GB
-        "num_processes": mp.cpu_count(),
-        "rows_per_chunk": 1_000_000,
+        "target_size": 25 * 1024**3,  # 25 GB
+        "rows_per_chunk": 100_000,
     }
 
-    np_algorithm = functools.partial(main_np, **args)
-    py_algorithm = functools.partial(main_py, **args)
+    args_2 = {
+        "filename": FILENAME,
+        "header": ["id", "name", "value1", "value2", "value3"],
+        "target_size": 25 * 1024**3,  # 25 GB
+        "rows_per_chunk": 2_500_000,
+    }
 
-    time_np = timeit.timeit(np_algorithm, number=1)
+    np_algo_config_1 = functools.partial(main_np, **args)
+    np_algo_config_2 = functools.partial(main_np, **args_2)
+    py_algo_config = functools.partial(main_py, **args)
+
+    time_np = timeit.timeit(np_algo_config_2, number=1)
     logger.info(f"NumPy: {time_np:.2f} s")
 
     # NOTE: Currently not testing Python algorithm
-    # time_py = timeit.timeit(py_algorithm, number=1)
+    # time_py = timeit.timeit(py_algo_config, number=1)
     # logger.info(f"Python: {time_py:.2f} s")
