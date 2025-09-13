@@ -2,6 +2,7 @@ import logging
 import multiprocessing as mp
 import shutil
 import sys
+import timeit
 from pathlib import Path
 from typing import Final
 
@@ -122,10 +123,14 @@ def main_np() -> None:
 
 
 if __name__ == "__main__":
+    mp.set_start_method("spawn")
+
     output = Path(FILENAME)
     if output.exists():
         output.unlink()
 
-    mp.set_start_method("spawn")
-    main_py()  # 80.332s - File is 701MB
-    main_np()  # 18.465s - File is 1.1GGB
+    time_np = timeit.timeit(main_np, number=1)
+    logger.info(f"NumPy: {time_np:.2f} s")
+
+    time_py = timeit.timeit(main_py, number=1)
+    logger.info(f"Python: {time_py:.2f} s")
