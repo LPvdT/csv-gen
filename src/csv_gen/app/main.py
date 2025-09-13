@@ -1,19 +1,17 @@
 import functools
 import timeit
-from typing import Final
 
 from loguru import logger
 
-from csv_gen.utils.np import main_np
-
-# Configuration
-FILENAME: Final[str] = "bigfile.csv"
-DEFAULT_HEADERS: Final[list[str]] = ["id", "name", "value1", "value2", "value3"]
+from csv_gen.app.algorithms import main_np
+from csv_gen.app.config.config import get_settings
 
 if __name__ == "__main__":
+    settings = get_settings()
+
     args_base = {
-        "filename": FILENAME,
-        "header": ["id", "name", "value1", "value2", "value3"],
+        "filename": settings.FILENAME,
+        "header": settings.DEFAULT_HEADERS,
     }
 
     args_1 = args_base.copy()
