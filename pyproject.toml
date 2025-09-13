@@ -30,10 +30,10 @@ dev = [
 ]
 
 test = [
-    "pytest>=8.4.1",
     "pytest-cov>=6.2.1",
     "pytest-sugar>=1.0.0",
     "pytest-xdist>=3.8.0",
+    "pytest>=8.4.1",
 ]
 
 [tool.hatch.version]
@@ -61,31 +61,31 @@ select = [
 ]
 
 ignore = [
-    "I",   # isort
+    "CPY", # copyright
     "D",   # pydocstyle
     "DOC", # pydoclint
+    "I",   # isort
     "TD",  # comments TODO
-    "CPY", # copyright
 ]
 
 extend-ignore = [
     "E501", # pycodestyle
     # bandit
-    "S603",
-    "S607",
-    "S404",
     "B008", # flake8-builtins
     "N806", # pep8-naming
+    "S404",
+    "S603",
+    "S607",
 
     # ruff plugins hygiene
+    "ANN401",  # Dynamically typed expressions (typing.Any) are disallowed
+    "COM812",  # trailing comma
+    "ERA001",  # Found commented-out code
+    "FIX002",  # fixme-style TODO
+    "N803",    # Argument name should be lowercase
     "PGH003",
     "PGH004",
     "PLR0914", # flake8-refactor
-    "FIX002",  # fixme-style TODO
-    "COM812",  # trailing comma
-    "N803",    # Argument name should be lowercase
-    "ERA001",  # Found commented-out code
-    "ANN401",  # Dynamically typed expressions (typing.Any) are disallowed
 ]
 
 fixable = [
@@ -94,10 +94,10 @@ fixable = [
 
 exclude = [
     ".git",
+    ".venv",
     "__pycache__",
     "build",
     "dist",
-    ".venv",
     "venv",
 ]
 
