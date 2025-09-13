@@ -1,5 +1,4 @@
 import csv
-import multiprocessing as mp
 from pathlib import Path
 from typing import Any
 
@@ -10,7 +9,6 @@ from numpy._typing._nbit_base import _64Bit
 GENERATOR = np.random.default_rng()
 
 
-# ---------- NumPy Batch Generator (with ASCII-range trick) ----------
 def random_words(count: int, length: int) -> np.ndarray:
     """
     Generate an array of random lowercase words using direct ASCII codes.
@@ -41,8 +39,9 @@ def generate_batch(
     )
 
 
-# ---------- Worker ----------
-def worker(start_id: int, count: int, filename: str, header: list[str]) -> None:
+def run_worker(
+    start_id: int, count: int, filename: str, header: list[str]
+) -> None:
     """Each worker writes its own CSV chunk file."""
 
     rows = generate_batch(start_id, count)
@@ -52,62 +51,3 @@ def worker(start_id: int, count: int, filename: str, header: list[str]) -> None:
         writer = csv.writer(f)
         writer.writerow(header)
         writer.writerows(rows)
-
-
-# ---------- Main ----------
-TARGET_SIZE = 1 * 1024**3  # 1 GB
-FILENAME = "bigfile.csv"
-NUM_PROCESSES = mp.cpu_count()
-ROWS_PER_CHUNK = 1_000_000  # tune this depending on memory/disk speed
-
-
-def main() -> None:
-    header = ["id", "name", "value1", "value2", "value3"]
-
-    # --- estimate average row size ---
-    test_file = "test_chunk.csv"
-    worker(0, 10_000, test_file, header)
-    avg_row_size = Path(test_file).stat().st_size / 10_000
-    Path(test_file).unlink()
-
-    est_rows = int(TARGET_SIZE / avg_row_size)
-    print(
-        f"Estimated {est_rows:,} rows for ~{TARGET_SIZE / (1024**3):.2f} GB target"
-    )
-
-    # --- launch workers ---
-    processes: list[mp.Process] = []
-    row_id = 0
-    chunk_id = 0
-    while row_id < est_rows:
-        count = min(ROWS_PER_CHUNK, est_rows - row_id)
-        chunk_file = f"chunk_{chunk_id}.csv"
-        p = mp.Process(target=worker, args=(row_id, count, chunk_file, header))
-        processes.append(p)
-        p.start()
-        row_id += count
-        chunk_id += 1
-
-    for p in processes:
-        p.join()
-
-    # --- merge chunks into one file ---
-    with Path(FILENAME).open(
-        "w", newline="", buffering=1024 * 1024, encoding="utf-8"
-    ) as out:
-        out.write(",".join(header) + "\n")
-        for i in range(chunk_id):
-            chunk_file = Path(f"chunk_{i}.csv")
-            with chunk_file.open(newline="") as f:
-                next(f)  # skip header
-                for line in f:
-                    out.write(line)
-            chunk_file.unlink()
-
-    size_gb = Path(FILENAME).stat().st_size / (1024**3)
-    print(f"Generated {FILENAME} with size ~{size_gb:.2f} GB")
-
-
-if __name__ == "__main__":
-    mp.set_start_method("spawn")  # portable across platforms
-    main()
