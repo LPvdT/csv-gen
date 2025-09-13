@@ -9,21 +9,19 @@ readme = "README.md"
 authors = [
     { name = "Laurens van der Tas", email = "laurens.vandertas@gmail.com" },
 ]
-requires-python = ">=3.12,<3.13"
+requires-python = ">=3.13,<3.14"
 
 dependencies = [
     "hatch-vcs",
     "loguru>=0.7.3",
     "numpy>=2.3.2",
+    "tqdm>=4.67.1",
 ]
 
 [dependency-groups]
 dev = [
     "basedpyright>=1.31.0",
-    "ipykernel>=6.29.5",
-    "ipywidgets>=8.1.7",
     "mccabe>=0.7.0",
-    "notebook>=7.4.4",
     "pre-commit>=4.2.0",
     "pyment>=0.3.3",
     "ruff>=0.12.4",
@@ -51,7 +49,7 @@ build-backend = "hatchling.build"
 directory = "htmlcov"
 
 [tool.ruff]
-target-version = "py312"
+target-version = "py313"
 line-length = 80
 
 [tool.ruff.lint]
