@@ -1,117 +1,142 @@
-import csv
-import multiprocessing as mp
+import multiprocessing
 import shutil
+from concurrent.futures import Future, ProcessPoolExecutor, as_completed
 from pathlib import Path
-from typing import Any, Final
 
 import numpy as np
 from loguru import logger
-from numpy import signedinteger
-from numpy._typing._nbit_base import _64Bit
 
 GENERATOR = np.random.default_rng()
 
 
-def random_words(count: int, length: int) -> np.ndarray:
+def random_words_bytes(count: int, length: int) -> np.ndarray:
     """
-    Generate an array of random lowercase words using direct ASCII codes.
-    'a' = 97, 'z' = 122. Much faster than np.random.choice().
+    Generate random lowercase words directly as fixed-length ASCII byte arrays.
     """
 
-    codes = GENERATOR.integers(97, 123, size=(count, length))
+    codes = GENERATOR.integers(97, 123, size=(count, length), dtype=np.uint8)
 
-    return np.array([
-        bytes(row).decode("ascii") for row in codes.astype(np.uint8)
-    ])
+    return codes.view(  # dtype "S{length}" = fixed-length byte string
+        f"S{length}"
+    ).ravel()
 
 
 def generate_batch(
-    start_id: int, count: int
-) -> list[list[signedinteger[_64Bit] | Any]]:
-    """Generate a batch of rows using NumPy RNG (vectorized)."""
+    start_id: int, count: int, header: list[str], filename: str
+) -> None:
+    """
+    Worker: generate a CSV chunk with `count` rows starting from `start_id`.
+    """
 
     ids = np.arange(start_id, start_id + count, dtype=np.int64)
-    names = random_words(count, 12)
+    names = random_words_bytes(count, 12)
     values1 = GENERATOR.integers(0, 1_000_001, size=count, dtype=np.int64)
-    values1 = GENERATOR.integers(0, 1_000_001, size=count, dtype=np.int64)
-    values2 = GENERATOR.uniform(size=count)
-    values3 = random_words(count, 8)
+    values2 = GENERATOR.random(size=count)
+    values3 = random_words_bytes(count, 8)
 
-    return list(
-        map(list, zip(ids, names, values1, values2, values3, strict=True))
-    )
+    with Path(filename).open("wb", buffering=1024 * 1024) as f:
+        # write header once
+        f.write((";".join(header) + "\n").encode("utf-8"))
 
+        # preallocate a bytearray for each row -> join all at once
+        # format: id;name;value1;value2;value3\n
+        rows: list[str] = []
+        for i in range(count):
+            row = (
+                f"{ids[i]};"
+                f"{names[i].decode('ascii')};"
+                f"{values1[i]};"
+                f"{values2[i]:.6f};"
+                f"{values3[i].decode('ascii')}\n"
+            )
+            rows.append(row)
 
-def run_worker(
-    start_id: int, count: int, filename: str, header: list[str]
-) -> None:
-    """Each worker writes its own CSV chunk file."""
-
-    rows = generate_batch(start_id, count)
-    with Path(filename).open(
-        "w", newline="", buffering=1024 * 1024, encoding="utf-8"
-    ) as f:
-        writer = csv.writer(f)
-        writer.writerow(header)
-        writer.writerows(rows)
+        f.write("".join(rows).encode("utf-8"))
 
 
 def main_np(
     filename: str,
     header: list[str],
     target_size: int,
-    num_processes: int,
-    rows_per_chunk: int,
+    num_processes: int = multiprocessing.cpu_count(),
+    rows_per_chunk: int = 100_000,
 ) -> None:
+    """
+    NumPy-powered CSV generator.
+    """
+
     logger.info("NumPy CSV generation algorithm")
 
-    test_file_: Final[Path] = Path("test_chunk.csv")
-
-    # Estimate rows needed
-    logger.info("Estimating rows needed...")
-
-    run_worker(0, 10_000, str(test_file_), header)
-    avg_row_size = test_file_.stat().st_size / 10_000
-    test_file_.unlink()
-
+    logger.info("Estimating row size...")
+    test_file = Path("test_sample.csv")
+    generate_batch(0, 10_000, header, str(test_file))
+    avg_row_size = test_file.stat().st_size / 10_000
+    test_file.unlink()
     est_rows = int(target_size / avg_row_size)
     logger.info(
-        f"Need about {est_rows:,} rows (~{target_size / (1024**3):.2f} GB target)"
+        f"Estimated rows needed: {est_rows:,} (~{target_size / (1024**3):.2f} GB)"
     )
 
-    # Launch workers
-    logger.info("Starting CSV generation...")
-    logger.info(f"Launching {num_processes} processes...")
-    processes: list[mp.Process] = []
-    row_id = 0
-    chunk_id = 0
-    while row_id < est_rows and len(processes) < num_processes:
-        logger.debug(f"Starting chunk: {chunk_id}...")
-        count = min(rows_per_chunk, est_rows - row_id)
-        chunk_file = f"chunk_{chunk_id}.csv"
-        p = mp.Process(
-            target=run_worker, args=(row_id, count, chunk_file, header)
-        )
-        processes.append(p)
-        p.start()
-        row_id += count
-        chunk_id += 1
+    # Schedule jobs
+    logger.info("Spawning workers...")
+    chunk_files: list[str] = []
+    with ProcessPoolExecutor(max_workers=num_processes) as pool:
+        futures: list[Future[None]] = []
+        row_id = 0
+        chunk_id = 0
+        while row_id < est_rows:
+            count = min(rows_per_chunk, est_rows - row_id)
+            chunk_file = f"chunk_{chunk_id}.csv"
+            futures.append(
+                pool.submit(generate_batch, row_id, count, header, chunk_file)
+            )
+            chunk_files.append(chunk_file)
+            row_id += count
+            chunk_id += 1
 
-    for p in processes:
-        p.join()
+        for future in as_completed(futures):
+            future.result()
 
-    # Merge files
-    logger.info("Merging chunk files...")
-    with Path(filename).open(
-        "w", newline="", buffering=1024 * 1024, encoding="utf-8"
-    ) as out:
-        out.write(";".join(header) + "\n")
-        for i in range(chunk_id):
-            chunk_file = Path(f"chunk_{i}.csv")
-            with chunk_file.open("r", newline="", encoding="utf-8") as f:
+    # Merge chunks
+    logger.info("Merging chunks...")
+    with Path(filename).open("wb", buffering=1024 * 1024) as out:
+        out.write((";".join(header) + "\n").encode("utf-8"))
+        for file in chunk_files:
+            with Path(file).open("rb") as f:
                 next(f)  # skip header
                 shutil.copyfileobj(f, out)
-            chunk_file.unlink()
+            Path(file).unlink()
 
-    size_gb = Path(filename).stat().st_size / (1024**3)
-    logger.info(f"Generated {filename} with size ~{size_gb:.2f} GB")
+    size = Path(filename).stat().st_size
+    logger.info(f"Generated {filename} with size {size / (1024**3):.2f} GB")
+
+    # Correction step if undersized
+    if size < target_size:
+        logger.info("File undersized, appending rows until target reached...")
+        with Path(filename).open("ab", buffering=1024 * 1024) as out:
+            row_id = est_rows
+            while size < target_size:
+                ids = np.arange(row_id, row_id + rows_per_chunk, dtype=np.int64)
+                names = random_words_bytes(rows_per_chunk, 12)
+                values1 = GENERATOR.integers(
+                    0, 1_000_001, size=rows_per_chunk, dtype=np.int64
+                )
+                values2 = GENERATOR.random(size=rows_per_chunk)
+                values3 = random_words_bytes(rows_per_chunk, 8)
+
+                rows: list[str] = []
+                for i in range(rows_per_chunk):
+                    row = (
+                        f"{ids[i]};"
+                        f"{names[i].decode('ascii')};"
+                        f"{values1[i]};"
+                        f"{values2[i]:.6f};"
+                        f"{values3[i].decode('ascii')}\n"
+                    )
+                    rows.append(row)
+
+                out.write("".join(rows).encode("utf-8"))
+                row_id += rows_per_chunk
+                size = Path(filename).stat().st_size
+
+        logger.info(f"Corrected size: {size / (1024**3):.2f} GB")
