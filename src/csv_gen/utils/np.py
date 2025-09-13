@@ -114,6 +114,7 @@ def main_np(  # noqa
 ) -> None:
     """Generate a large CSV by streaming chunks directly to disk (low RAM usage)."""
     logger.success("🚀 Starting NumPy streaming CSV generation")
+    logger.info(f"Generating '{filename}' ({target_size / (1024**3):.2f} GB)")
 
     if not n_workers:
         n_workers = multiprocessing.cpu_count()
@@ -130,19 +131,24 @@ def main_np(  # noqa
     )
     avg_row_size = len(test_bytes) / 10_000
     est_rows = int(target_size / avg_row_size)
+    logger.info(
+        f"Estimated rows: {est_rows:,} (~{target_size / (1024**3):.2f} GB, avg row {avg_row_size:.1f} bytes)"
+    )
 
     if not rows_per_chunk:
         total_ram = psutil.virtual_memory().available
         max_ram = int(total_ram * 0.25)
-        rows_per_chunk = max(1, int(max_ram / avg_row_size))
-        logger.info(
-            f"Autodetected rows_per_chunk: {rows_per_chunk:,} "
-            f"(allocated {max_ram / (1024**3):.2f} GB/{total_ram / (1024**3):.2f} GB available RAM)"
-        )
 
-    logger.info(
-        f"Estimated rows: {est_rows:,} (~{target_size / (1024**3):.2f} GB, avg row {avg_row_size:.1f} bytes)"
-    )
+        detected_rows_per_chunk = max(1, int(max_ram / avg_row_size))
+        rows_per_chunk = min(detected_rows_per_chunk, est_rows)
+        rows_per_chunk = min(rows_per_chunk, 250_000)
+
+        if detected_rows_per_chunk == rows_per_chunk:
+            logger.info(
+                f"Autodetected rows_per_chunk: {rows_per_chunk:,} "
+                f"(allocated {max_ram / (1024**3):.2f} GB/{total_ram / (1024**3):.2f} GB available RAM)"
+            )
+        logger.info(f"Using rows_per_chunk: {rows_per_chunk:,}")
 
     # Generate chunks in parallel
     chunk_files: list[str] = []
