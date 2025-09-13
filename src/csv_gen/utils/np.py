@@ -136,8 +136,8 @@ def main_np(  # noqa
         max_ram = int(total_ram * 0.25)
         rows_per_chunk = max(1, int(max_ram / avg_row_size))
         logger.info(
-            f"Autodetected rows_per_chunk: {rows_per_chunk} "
-            f"(allocated {max_ram / (1024**3):.2f} GB/{total_ram / (1024**3):.2f} GB total RAM)"
+            f"Autodetected rows_per_chunk: {rows_per_chunk:,} "
+            f"(allocated {max_ram / (1024**3):.2f} GB/{total_ram / (1024**3):.2f} GB available RAM)"
         )
 
     logger.info(
