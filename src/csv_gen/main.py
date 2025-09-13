@@ -18,24 +18,23 @@ if __name__ == "__main__":
     if output.exists():
         output.unlink()
 
-    args = {
+    args_base = {
         "filename": FILENAME,
         "header": ["id", "name", "value1", "value2", "value3"],
-        "target_size": 1 * 1024**3,  # 1 GB
-        "num_processes": mp.cpu_count(),
-        "rows_per_chunk": 1_000_000,
+        "rows_per_chunk": 250_000,  # Good sweet spot
     }
 
-    args_2 = {
-        "filename": FILENAME,
-        "header": ["id", "name", "value1", "value2", "value3"],
+    args_1 = args_base.copy()
+    args_1.update({
+        "target_size": 5 * 1024**3,  # 5 GB
+    })
+
+    args_2 = args_base.copy()
+    args_2.update({
         "target_size": 25 * 1024**3,  # 25 GB
-        "num_processes": mp.cpu_count(),
-        "rows_per_chunk": 1_000_000,
-    }
+    })
 
-    np_algo_config_1 = functools.partial(main_np, **args)
-    # np_algo_config_2 = functools.partial(main_np, **args_2)
+    np_algo_config_1 = functools.partial(main_np, **args_1)
 
-    time_np = timeit.timeit(np_algo_config_1, number=1)
+    time_np = timeit.timeit(np_algo_config_1, number=3)
     logger.info(f"NumPy: {time_np:.2f} s")
