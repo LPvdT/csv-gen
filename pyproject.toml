@@ -17,11 +17,13 @@ dependencies = [
     "loguru>=0.7.3",
     "numpy>=2.1.3",
     "psutil>=7.0.0",
+    "pydantic-settings>=2.10.1",
+    "pydantic>=2.11.9",
     "tqdm>=4.67.1",
 ]
 
 [project.scripts]
-csv-gen = "csv_gen.cli:app"
+csv-gen = "csv_gen.app.cli:cli"
 
 [dependency-groups]
 dev = [
