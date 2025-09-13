@@ -1,5 +1,4 @@
 import functools
-import multiprocessing as mp
 import timeit
 from pathlib import Path
 from typing import Final
@@ -12,8 +11,6 @@ from csv_gen.utils.np import main_np
 FILENAME: Final[str] = "bigfile.csv"
 
 if __name__ == "__main__":
-    mp.set_start_method("spawn")
-
     output = Path(FILENAME)
     if output.exists():
         output.unlink()
@@ -26,15 +23,19 @@ if __name__ == "__main__":
 
     args_1 = args_base.copy()
     args_1.update({
-        "target_size": 5 * 1024**3,  # 5 GB
+        "target_size": 1 * 1024**3,  # 1 GB
     })
 
     args_2 = args_base.copy()
     args_2.update({
+        "target_size": 5 * 1024**3,  # 5 GB
+    })
+
+    args_3 = args_base.copy()
+    args_3.update({
         "target_size": 25 * 1024**3,  # 25 GB
     })
 
     np_algo_config_1 = functools.partial(main_np, **args_1)
-
-    time_np = timeit.timeit(np_algo_config_1, number=3)
+    time_np = timeit.timeit(np_algo_config_1, number=1)
     logger.info(f"NumPy: {time_np:.2f} s")
