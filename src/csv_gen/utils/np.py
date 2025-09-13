@@ -3,6 +3,7 @@ from concurrent.futures import Future, ProcessPoolExecutor, as_completed
 from pathlib import Path
 
 import numpy as np
+import psutil
 from loguru import logger
 from tqdm.auto import tqdm
 
@@ -104,15 +105,19 @@ def generate_batch_bytes(start_id: int, count: int) -> bytes:
     return build_rows_bytes(ids, names, values1, values2, values3)
 
 
-def main_np(
+def main_np(  # noqa
     filename: str,
     header: list[str],
     target_size: int,
-    num_processes: int = multiprocessing.cpu_count(),
-    rows_per_chunk: int = 100_000,
+    n_workers: int | None = None,
+    rows_per_chunk: int | None = None,
 ) -> None:
     """Generate a large CSV by streaming chunks directly to disk (low RAM usage)."""
     logger.success("🚀 Starting NumPy streaming CSV generation")
+
+    if not n_workers:
+        n_workers = multiprocessing.cpu_count()
+    logger.info(f"Using {n_workers} processes...")
 
     # Estimate row size
     logger.info("Estimating row size...")
@@ -125,6 +130,16 @@ def main_np(
     )
     avg_row_size = len(test_bytes) / 10_000
     est_rows = int(target_size / avg_row_size)
+
+    if not rows_per_chunk:
+        total_ram = psutil.virtual_memory().available
+        max_ram = int(total_ram * 0.25)
+        rows_per_chunk = max(1, int(max_ram / avg_row_size))
+        logger.info(
+            f"Autodetected rows_per_chunk: {rows_per_chunk} "
+            f"(allocated {max_ram / (1024**3):.2f} GB/{total_ram / (1024**3):.2f} GB total RAM)"
+        )
+
     logger.info(
         f"Estimated rows: {est_rows:,} (~{target_size / (1024**3):.2f} GB, avg row {avg_row_size:.1f} bytes)"
     )
@@ -132,7 +147,7 @@ def main_np(
     # Generate chunks in parallel
     chunk_files: list[str] = []
     futures: list[Future[str]] = []
-    with ProcessPoolExecutor(max_workers=num_processes) as pool:
+    with ProcessPoolExecutor(max_workers=n_workers) as pool:
         row_id = 0
         chunk_id = 0
         while row_id < est_rows:
@@ -146,18 +161,29 @@ def main_np(
             chunk_id += 1
 
         with tqdm(
-            total=len(futures), desc="Generating chunks", unit="chunk"
+            total=len(futures),
+            desc="Generating chunks",
+            unit="chunk",
+            dynamic_ncols=True,
+            leave=True,
         ) as pbar:
             for future in as_completed(futures):
                 future.result()
                 pbar.update(1)
+            pbar.close()
 
     # Merge chunk files into final CSV
     logger.info("Merging chunk files into final CSV...")
     final_path = Path(filename)
     with final_path.open("wb", buffering=1024 * 1024) as out:
         out.write((";".join(header) + "\n").encode("utf-8"))
-        for tmp_file in tqdm(chunk_files, desc="Merging chunks", unit="chunk"):
+        for tmp_file in tqdm(
+            chunk_files,
+            desc="Merging chunks",
+            unit="chunk",
+            dynamic_ncols=True,
+            leave=True,
+        ):
             with Path(tmp_file).open("rb") as f:
                 out.write(f.read())
             Path(tmp_file).unlink()  # remove temp file immediately
@@ -175,7 +201,11 @@ def main_np(
         with (
             final_path.open("ab", buffering=1024 * 1024) as out,
             tqdm(
-                total=est_missing_rows, desc="Correction step", unit="rows"
+                total=est_missing_rows,
+                desc="Correction step",
+                unit="rows",
+                dynamic_ncols=True,
+                leave=True,
             ) as pbar,
         ):
             written_rows = 0
@@ -188,6 +218,7 @@ def main_np(
                 written_rows += batch_size
                 size = final_path.stat().st_size
                 pbar.update(batch_size)
+            pbar.close()
 
     # Final size check: truncate if oversize
     size = final_path.stat().st_size
