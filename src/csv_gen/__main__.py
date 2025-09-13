@@ -1,4 +1,4 @@
-from csv_gen.cli import app
+from csv_gen.app.cli import cli
 
 if __name__ == "__main__":
-    app()
+    cli()
