@@ -7,8 +7,8 @@ from typing import Final
 
 from loguru import logger
 
-from .utils import np as np_utils
-from .utils import python as py_utils
+from csv_gen.utils import np as np_utils
+from csv_gen.utils import python as py_utils
 
 # Configuration
 FILENAME: Final[str] = "bigfile.csv"
