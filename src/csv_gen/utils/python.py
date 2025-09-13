@@ -41,8 +41,8 @@ def main_py(
     filename: str,
     header: list[str],
     target_size: int,
-    num_processes: int,
     rows_per_chunk: int,
+    num_processes: int = mp.cpu_count(),
 ) -> None:
     logger.info("Python CSV generation algorithm")
 
