@@ -1,8 +1,11 @@
 import csv
 import multiprocessing as mp
-import os
+from pathlib import Path
+from typing import Any
 
 import numpy as np
+from numpy import signedinteger
+from numpy._typing._nbit_base import _64Bit
 
 GENERATOR = np.random.default_rng()
 
@@ -21,7 +24,9 @@ def random_words(count: int, length: int) -> np.ndarray:
     ])
 
 
-def generate_batch(start_id: int, count: int) -> list[list[str | int | float]]:
+def generate_batch(
+    start_id: int, count: int
+) -> list[list[signedinteger[_64Bit] | Any]]:
     """Generate a batch of rows using NumPy RNG (vectorized)."""
 
     ids = np.arange(start_id, start_id + count, dtype=np.int64)
@@ -31,7 +36,9 @@ def generate_batch(start_id: int, count: int) -> list[list[str | int | float]]:
     values2 = GENERATOR.uniform(size=count)
     values3 = random_words(count, 8)
 
-    return list(map(list, zip(ids, names, values1, values2, values3)))
+    return list(
+        map(list, zip(ids, names, values1, values2, values3, strict=True))
+    )
 
 
 # ---------- Worker ----------
@@ -39,7 +46,9 @@ def worker(start_id: int, count: int, filename: str, header: list[str]) -> None:
     """Each worker writes its own CSV chunk file."""
 
     rows = generate_batch(start_id, count)
-    with open(filename, "w", newline="", buffering=1024 * 1024) as f:
+    with Path(filename).open(
+        "w", newline="", buffering=1024 * 1024, encoding="utf-8"
+    ) as f:
         writer = csv.writer(f)
         writer.writerow(header)
         writer.writerows(rows)
@@ -58,8 +67,8 @@ def main() -> None:
     # --- estimate average row size ---
     test_file = "test_chunk.csv"
     worker(0, 10_000, test_file, header)
-    avg_row_size = os.path.getsize(test_file) / 10_000
-    os.remove(test_file)
+    avg_row_size = Path(test_file).stat().st_size / 10_000
+    Path(test_file).unlink()
 
     est_rows = int(TARGET_SIZE / avg_row_size)
     print(
@@ -83,17 +92,19 @@ def main() -> None:
         p.join()
 
     # --- merge chunks into one file ---
-    with open(FILENAME, "w", newline="", buffering=1024 * 1024) as out:
+    with Path(FILENAME).open(
+        "w", newline="", buffering=1024 * 1024, encoding="utf-8"
+    ) as out:
         out.write(",".join(header) + "\n")
         for i in range(chunk_id):
-            chunk_file = f"chunk_{i}.csv"
-            with open(chunk_file, "r", newline="") as f:
+            chunk_file = Path(f"chunk_{i}.csv")
+            with chunk_file.open(newline="") as f:
                 next(f)  # skip header
                 for line in f:
                     out.write(line)
-            os.remove(chunk_file)
+            chunk_file.unlink()
 
-    size_gb = os.path.getsize(FILENAME) / (1024**3)
+    size_gb = Path(FILENAME).stat().st_size / (1024**3)
     print(f"Generated {FILENAME} with size ~{size_gb:.2f} GB")
 
 
