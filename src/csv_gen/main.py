@@ -22,12 +22,16 @@ if __name__ == "__main__":
         "filename": FILENAME,
         "header": ["id", "name", "value1", "value2", "value3"],
         "target_size": 1 * 1024**3,  # 1 GB
+        "num_processes": mp.cpu_count(),
+        "rows_per_chunk": 1_000_000,
     }
 
     args_2 = {
         "filename": FILENAME,
         "header": ["id", "name", "value1", "value2", "value3"],
         "target_size": 25 * 1024**3,  # 25 GB
+        "num_processes": mp.cpu_count(),
+        "rows_per_chunk": 1_000_000,
     }
 
     np_algo_config_1 = functools.partial(main_np, **args)
