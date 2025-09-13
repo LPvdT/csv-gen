@@ -11,10 +11,6 @@ from csv_gen.utils.np import main_np
 FILENAME: Final[str] = "bigfile.csv"
 
 if __name__ == "__main__":
-    output = Path(FILENAME)
-    if output.exists():
-        output.unlink()
-
     args_base = {
         "filename": FILENAME,
         "header": ["id", "name", "value1", "value2", "value3"],
@@ -22,7 +18,7 @@ if __name__ == "__main__":
 
     args_1 = args_base.copy()
     args_1.update({
-        "target_size": 1 * 1024**3,  # 1 GB
+        "target_size": 100 * 1024**2,  # 100 MB
     })
 
     args_2 = args_base.copy()
