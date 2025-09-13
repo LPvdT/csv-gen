@@ -1,0 +1,133 @@
+[project]
+name = "csv-gen"
+dynamic = [
+    "version",
+]
+description = "Generate CSV files with fake data"
+license = { file = "LICENSE" }
+readme = "README.md"
+authors = [
+    { name = "Laurens van der Tas", email = "laurens.vandertas@gmail.com" },
+]
+requires-python = ">=3.12,<3.13"
+
+dependencies = [
+    "hatch-vcs",
+    "loguru>=0.7.3",
+    "numpy>=2.3.2",
+]
+
+[dependency-groups]
+dev = [
+    "basedpyright>=1.31.0",
+    "ipykernel>=6.29.5",
+    "ipywidgets>=8.1.7",
+    "mccabe>=0.7.0",
+    "notebook>=7.4.4",
+    "pre-commit>=4.2.0",
+    "pyment>=0.3.3",
+    "ruff>=0.12.4",
+    "yamlfix>=1.17.0",
+]
+
+test = [
+    "pytest>=8.4.1",
+    "pytest-cov>=6.2.1",
+    "pytest-sugar>=1.0.0",
+    "pytest-xdist>=3.8.0",
+]
+
+[tool.hatch.version]
+source = "vcs"
+
+[build-system]
+requires = [
+    "hatch-vcs",
+    "hatchling",
+]
+build-backend = "hatchling.build"
+
+[tool.coverage.html]
+directory = "htmlcov"
+
+[tool.ruff]
+target-version = "py312"
+line-length = 80
+
+[tool.ruff.lint]
+preview = true
+
+select = [
+    "ALL",
+]
+
+ignore = [
+    "I",   # isort
+    "D",   # pydocstyle
+    "DOC", # pydoclint
+    "TD",  # comments TODO
+    "CPY", # copyright
+]
+
+extend-ignore = [
+    "E501", # pycodestyle
+    # bandit
+    "S603",
+    "S607",
+    "S404",
+    "B008", # flake8-builtins
+    "N806", # pep8-naming
+
+    # ruff plugins hygiene
+    "PGH003",
+    "PGH004",
+    "PLR0914", # flake8-refactor
+    "FIX002",  # fixme-style TODO
+    "COM812",  # trailing comma
+    "N803",    # Argument name should be lowercase
+    "ERA001",  # Found commented-out code
+    "ANN401",  # Dynamically typed expressions (typing.Any) are disallowed
+]
+
+fixable = [
+    "ALL",
+]
+
+exclude = [
+    ".git",
+    "__pycache__",
+    "build",
+    "dist",
+    ".venv",
+    "venv",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"**/tests/*" = [
+    "S101",
+]
+"**/scripts/*" = [
+    "INP001",
+]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
+[tool.ruff.format]
+preview = true
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
+docstring-code-format = true
+docstring-code-line-length = 80
+
+[tool.yamlfix]
+indentation = 2
+quote_type = "single"
+explicit_start = false
+explicit_end = true
+trim_trailing_spaces = true
+comments_min_spaces_from_content = 2
+whitelines = 1
+comments_whitelines = 1
+section_whitelines = 1
