@@ -1,6 +1,5 @@
 import functools
 import timeit
-from pathlib import Path
 from typing import Final
 
 from loguru import logger

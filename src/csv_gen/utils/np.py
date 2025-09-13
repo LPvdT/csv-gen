@@ -1,4 +1,5 @@
 import multiprocessing
+import tempfile
 from concurrent.futures import Future, ProcessPoolExecutor, as_completed
 from pathlib import Path
 
@@ -10,12 +11,14 @@ from tqdm.auto import tqdm
 GENERATOR = np.random.default_rng()
 
 
+@logger.catch
 def random_words_bytes(count: int, length: int) -> np.ndarray:
     """Generate an array of random ASCII byte strings of given length."""
     codes = GENERATOR.integers(97, 123, size=(count, length), dtype=np.uint8)
     return codes.view(f"S{length}").ravel()
 
 
+@logger.catch
 def build_rows_bytes(
     ids: np.ndarray,
     names: np.ndarray,
@@ -77,6 +80,7 @@ def build_rows_bytes(
     return bytes(out)
 
 
+@logger.catch
 def generate_chunk_file(start_id: int, count: int, tmp_file: str) -> str:
     """Generate a chunk of CSV rows directly to a temporary file."""
     ids = np.arange(start_id, start_id + count, dtype=np.int64)
@@ -94,6 +98,7 @@ def generate_chunk_file(start_id: int, count: int, tmp_file: str) -> str:
     return tmp_file
 
 
+@logger.catch
 def generate_batch_bytes(start_id: int, count: int) -> bytes:
     """Generate a batch of CSV rows as bytes (no header), used for correction step."""
     ids = np.arange(start_id, start_id + count, dtype=np.int64)
@@ -111,17 +116,20 @@ def main_np(  # noqa
     target_size: int,
     n_workers: int | None = None,
     rows_per_chunk: int | None = None,
+    *,
+    remove_result: bool = False,
 ) -> None:
     """Generate a large CSV by streaming chunks directly to disk (low RAM usage)."""
+
     logger.success("🚀 Starting NumPy streaming CSV generation")
-    logger.info(f"Generating '{filename}' ({target_size / (1024**3):.2f} GB)")
+    final_path = (Path(__file__).parents[3] / filename).resolve()
+    logger.info(f"Generating: {final_path} ({target_size / (1024**3):.2f} GB)")
 
     if not n_workers:
         n_workers = multiprocessing.cpu_count()
-    logger.info(f"Using {n_workers} processes...")
+    logger.debug(f"Using {n_workers} processes...")
 
     # Estimate row size
-    logger.info("Estimating row size...")
     test_bytes = build_rows_bytes(
         np.arange(0, 10_000),
         random_words_bytes(10_000, 12),
@@ -131,8 +139,8 @@ def main_np(  # noqa
     )
     avg_row_size = len(test_bytes) / 10_000
     est_rows = int(target_size / avg_row_size)
-    logger.info(
-        f"Estimated rows: {est_rows:,} (~{target_size / (1024**3):.2f} GB, avg row {avg_row_size:.1f} bytes)"
+    logger.debug(
+        f"Estimated rows: {est_rows:,} (~{target_size / (1024**3):.3f} GB | mean row size: {avg_row_size:.2f} bytes)"
     )
 
     if not rows_per_chunk:
@@ -150,6 +158,13 @@ def main_np(  # noqa
             )
         logger.info(f"Using rows_per_chunk: {rows_per_chunk:,}")
 
+    # Prepare temporary directory
+    tmp_dir = tempfile.TemporaryDirectory(
+        prefix="csv_gen_", suffix="_chunk_files", delete=False
+    )
+    tmp_dir_path = Path(tmp_dir.name)
+    logger.debug(f"Using temporary directory: {tmp_dir_path}")
+
     # Generate chunks in parallel
     chunk_files: list[str] = []
     futures: list[Future[str]] = []
@@ -158,7 +173,7 @@ def main_np(  # noqa
         chunk_id = 0
         while row_id < est_rows:
             count = min(rows_per_chunk, est_rows - row_id)
-            tmp_file = f"chunk_{chunk_id}.csv"
+            tmp_file = str(tmp_dir_path / f"chunk_{chunk_id}.csv")
             futures.append(
                 pool.submit(generate_chunk_file, row_id, count, tmp_file)
             )
@@ -180,8 +195,8 @@ def main_np(  # noqa
 
     # Merge chunk files into final CSV
     logger.info("Merging chunk files into final CSV...")
-    final_path = Path(filename)
     with final_path.open("wb", buffering=1024 * 1024) as out:
+        logger.debug(f"Writing to {final_path}...")
         out.write((";".join(header) + "\n").encode("utf-8"))
         for tmp_file in tqdm(
             chunk_files,
@@ -192,7 +207,6 @@ def main_np(  # noqa
         ):
             with Path(tmp_file).open("rb") as f:
                 out.write(f.read())
-            Path(tmp_file).unlink()  # remove temp file immediately
 
     # Correction step: directly append extra rows to final CSV if undersized
     size = final_path.stat().st_size
@@ -235,6 +249,12 @@ def main_np(  # noqa
         with final_path.open("rb+") as f:
             f.truncate(target_size)
 
+    tmp_dir.cleanup()
+
     logger.success(
         f"✨ Done! Final size: {final_path.stat().st_size / (1024**3):.2f} GB"
     )
+
+    if remove_result:
+        logger.debug("Removing final file...")
+        final_path.unlink()
