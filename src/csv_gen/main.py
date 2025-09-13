@@ -18,7 +18,6 @@ if __name__ == "__main__":
     args_base = {
         "filename": FILENAME,
         "header": ["id", "name", "value1", "value2", "value3"],
-        "rows_per_chunk": 250_000,  # Good sweet spot
     }
 
     args_1 = args_base.copy()
@@ -36,6 +35,11 @@ if __name__ == "__main__":
         "target_size": 25 * 1024**3,  # 25 GB
     })
 
-    np_algo_config_1 = functools.partial(main_np, **args_1)
+    args_3 = args_base.copy()
+    args_3.update({
+        "target_size": 50 * 1024**3,  # 50 GB
+    })
+
+    np_algo_config_1 = functools.partial(main_np, **args_2)
     time_np = timeit.timeit(np_algo_config_1, number=1)
     logger.info(f"NumPy: {time_np:.2f} s")
