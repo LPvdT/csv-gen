@@ -44,6 +44,8 @@ def main_py(
     num_processes: int,
     rows_per_chunk: int,
 ) -> None:
+    logger.info("Python CSV generation algorithm")
+
     test_file_: Final[Path] = Path("test_chunk.csv")
 
     # Estimate rows needed

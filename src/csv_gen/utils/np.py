@@ -56,13 +56,15 @@ def run_worker(
         writer.writerows(rows)
 
 
-def main_py(
+def main_np(
     filename: str,
     header: list[str],
     target_size: int,
     num_processes: int,
     rows_per_chunk: int,
 ) -> None:
+    logger.info("NumPy CSV generation algorithm")
+
     test_file_: Final[Path] = Path("test_chunk.csv")
 
     # Estimate rows needed
