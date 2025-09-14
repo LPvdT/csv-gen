@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 import multiprocessing
 import tempfile
 from concurrent.futures import Future, ProcessPoolExecutor, as_completed
 from pathlib import Path
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 import psutil
@@ -10,30 +12,17 @@ from faker import Faker
 from loguru import logger
 from tqdm.auto import tqdm
 
-GENERATOR = np.random.default_rng()
-faker = Faker()
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+GENERATOR: np.random.Generator = np.random.default_rng()
+faker: Faker = Faker()
 
 
 # ---------------------------
 # NumPy backend
 # ---------------------------
 def random_words_bytes(count: int, length: int) -> np.ndarray:
-    """
-    Generate a NumPy array of random words in bytes format.
-
-    Parameters
-    ----------
-    count : int
-        The number of words to generate.
-    length : int
-        The length of each word in bytes.
-
-    Returns
-    -------
-    np.ndarray
-        A NumPy array of shape (count,) containing random words as bytes.
-    """
-
     codes = GENERATOR.integers(97, 123, size=(count, length), dtype=np.uint8)
 
     return codes.view(f"S{length}").ravel()
@@ -188,121 +177,108 @@ def generate_chunk_faker(start_id: int, count: int, tmp_file: str) -> str:
 
 
 def generate_batch_faker(start_id: int, count: int) -> bytes:
-    """
-    Generate a batch of CSV data using Faker.
-
-    Parameters
-    ----------
-    start_id : int
-        The starting ID for the batch.
-    count : int
-        The number of rows to generate in the batch.
-
-    Returns
-    -------
-    bytes
-        A bytes object containing the generated batch of CSV data.
-    """
-
     rows = [
         build_row_faker(row_id) for row_id in range(start_id, start_id + count)
     ]
-
     return "".join(rows).encode("utf-8")
 
 
 # ---------------------------
-# Unified main
+# Helpers
 # ---------------------------
-def main_csv(
-    filename: str,
-    header: list[str],
-    target_size: int,
-    backend: Literal["numpy", "faker"] = "numpy",
-    n_workers: int | None = None,
-    rows_per_chunk: int | None = None,
-    *,
-    remove_result: bool = False,
-) -> None:
-    logger.success(f"🚀 Starting CSV generation with backend={backend}")
-    final_path = (Path(__file__).parents[3] / filename).resolve()
-    logger.info(f"Generating: {final_path} ({target_size / (1024**3):.2f} GB)")
+def estimate_row_size(backend: str, sample_size: int = 1000) -> float:
+    """
+    Estimate the average size of a row of CSV data in bytes.
 
-    if not n_workers:
-        n_workers = multiprocessing.cpu_count()
-    logger.debug(f"Using {n_workers} processes...")
+    Parameters
+    ----------
+    backend : str
+        The backend to use for estimation ("numpy" or "faker").
+    sample_size : int, optional
+        The number of rows to use for estimation (default is 1000).
 
-    # Estimate row size
+    Returns
+    -------
+    float
+        The estimated average row size in bytes.
+    """
+
     if backend == "numpy":
         test_bytes = build_rows_bytes(
-            np.arange(1000),
-            random_words_bytes(1000, 12),
-            np.arange(1000),
-            GENERATOR.random(size=1000),
-            random_words_bytes(1000, 8),
+            np.arange(sample_size),
+            random_words_bytes(sample_size, 12),
+            np.arange(sample_size),
+            GENERATOR.random(size=sample_size),
+            random_words_bytes(sample_size, 8),
         )
-        avg_row_size = len(test_bytes) / 1000
-    else:
-        sample_rows = [build_row_faker(i) for i in range(1000)]
-        avg_row_size = sum(len(r.encode("utf-8")) for r in sample_rows) / 1000
 
-    est_rows = int(target_size / avg_row_size)
-    logger.debug(
-        f"Estimated rows: {est_rows:,} (avg row size: {avg_row_size:.2f} bytes)"
-    )
+        return len(test_bytes) / sample_size
 
-    if not rows_per_chunk:
-        total_ram = psutil.virtual_memory().available
-        max_ram = int(total_ram * 0.25)
-        rows_per_chunk = min(int(max_ram / avg_row_size), est_rows, 250_000)
-        logger.info(f"Using rows_per_chunk: {rows_per_chunk:,}")
+    sample_rows = [build_row_faker(i) for i in range(sample_size)]
 
-    match backend:
-        case "numpy":
-            logger.info("Using NumPy backend")
-            chunk_fn = generate_chunk_numpy
-            batch_fn = generate_batch_numpy
-        case "faker":
-            logger.info("Using Faker backend")
-            chunk_fn = generate_chunk_faker
-            batch_fn = generate_batch_faker
-        case _:
-            msg = f"Unknown backend: {backend}"
-            raise ValueError(msg)
+    return sum(len(r.encode("utf-8")) for r in sample_rows) / sample_size
 
-    # Set up temporary directory
-    tmp_dir = tempfile.TemporaryDirectory(
-        prefix="csv_gen_", suffix="_chunk_files", delete=False
-    )
-    tmp_dir_path = Path(tmp_dir.name)
 
-    # Generate chunk files in parallel
+def schedule_chunks(
+    est_rows: int,
+    rows_per_chunk: int,
+    tmp_dir_path: Path,
+    pool: ProcessPoolExecutor,
+    chunk_fn: Callable[[int, int, str], str],
+) -> tuple[list[str], list[Future[str]]]:
+    """
+    Schedule generation of CSV chunks using a ProcessPoolExecutor.
+
+    Parameters
+    ----------
+    est_rows : int
+        The estimated number of rows to generate.
+    rows_per_chunk : int
+        The number of rows to generate per chunk.
+    tmp_dir_path : Path
+        The path to a temporary directory to write chunk files to.
+    pool : ProcessPoolExecutor
+        The pool to use for generating chunks.
+    chunk_fn : Callable[[int, int, str], str]
+        The function to use for generating chunks.
+
+    Returns
+    -------
+    tuple[list[str], list[Future[str]]]
+        A tuple containing the list of chunk files and the list of futures.
+    """
+
     chunk_files: list[str] = []
     futures: list[Future[str]] = []
-    with ProcessPoolExecutor(max_workers=n_workers) as pool:
-        row_id = 0
-        chunk_id = 0
-        while row_id < est_rows:
-            count = min(rows_per_chunk, est_rows - row_id)
-            tmp_file = str(tmp_dir_path / f"chunk_{chunk_id}.csv")
-            futures.append(pool.submit(chunk_fn, row_id, count, tmp_file))
-            chunk_files.append(tmp_file)
-            row_id += count
-            chunk_id += 1
+    row_id, chunk_id = 0, 0
 
-        with tqdm(
-            total=len(futures),
-            desc="Generating chunks",
-            unit="chunk",
-            dynamic_ncols=True,
-            leave=True,
-        ) as pbar:
-            for future in as_completed(futures):
-                future.result()
-                pbar.update(1)
-            pbar.close()
+    while row_id < est_rows:
+        count = min(rows_per_chunk, est_rows - row_id)
+        tmp_file = str(tmp_dir_path / f"chunk_{chunk_id}.csv")
+        futures.append(pool.submit(chunk_fn, row_id, count, tmp_file))
+        chunk_files.append(tmp_file)
+        row_id += count
+        chunk_id += 1
 
-    # Merge chunk files
+    return chunk_files, futures
+
+
+def merge_chunks(
+    final_path: Path, header: list[str], chunk_files: list[str]
+) -> None:
+    """
+    Merge a list of CSV chunk files into a single file.
+
+    Parameters
+    ----------
+    final_path : Path
+        The path to the final file to write the merged chunks to.
+    header : list[str]
+        The header row to write to the final file.
+    chunk_files : list[str]
+        The list of paths to the chunk files to merge.
+    """
+
     with final_path.open("wb", buffering=1024 * 1024) as out:
         out.write((";".join(header) + "\n").encode("utf-8"))
         for tmp_file in tqdm(
@@ -315,15 +291,20 @@ def main_csv(
             with Path(tmp_file).open("rb") as f:
                 out.write(f.read())
 
-    # Correction generated file if undersize
+
+def correct_size(  # noqa
+    final_path: Path,
+    target_size: int,
+    avg_row_size: float,
+    rows_per_chunk: int,
+    batch_fn: Callable[[int, int], bytes],
+    start_row: int,
+) -> int:
     size = final_path.stat().st_size
     if size < target_size:
-        logger.warning(
-            "File undersized, appending rows until target reached..."
-        )
+        logger.info("File undersized, appending rows until target reached...")
         missing_bytes = target_size - size
         est_missing_rows = int(missing_bytes / avg_row_size) + 1
-        row_id = est_rows
 
         with (
             final_path.open("ab", buffering=1024 * 1024) as out,
@@ -335,26 +316,112 @@ def main_csv(
                 leave=True,
             ) as pbar,
         ):
-            written_rows = 0
+            written = 0
             while size < target_size:
-                batch_size = min(
-                    rows_per_chunk, est_missing_rows - written_rows
-                )
-                out.write(batch_fn(row_id, batch_size))
-                row_id += batch_size
-                written_rows += batch_size
+                batch_size = min(rows_per_chunk, est_missing_rows - written)
+                out.write(batch_fn(start_row, batch_size))
+                start_row += batch_size
+                written += batch_size
                 size = final_path.stat().st_size
                 pbar.update(batch_size)
             pbar.close()
 
-    # Truncate generated file if oversize
+    return size
+
+
+def truncate_if_oversize(final_path: Path, target_size: int) -> None:
+    """
+    Truncates a file to a specified size if it is larger than the target size.
+
+    Parameters:
+        final_path (Path): The path to the file to be truncated.
+        target_size (int): The target size of the file in bytes.
+
+    Notes:
+        If the file is not larger than the target size, no truncation occurs.
+    """
+
     size = final_path.stat().st_size
     if size > target_size:
-        logger.warning(
-            f"Oversize detected ({(size - target_size) / (1024**2):.2f} MB). Truncating..."
-        )
+        logger.info(f"Oversize detected, truncating {size - target_size} bytes")
         with final_path.open("rb+") as f:
             f.truncate(target_size)
+
+
+# ---------------------------
+# Unified main
+# ---------------------------
+def main_csv(  # noqa
+    filename: str,
+    header: list[str],
+    target_size: int,
+    backend: Literal["faker", "numpy"] = "numpy",
+    *,
+    n_workers: int | None = None,
+    rows_per_chunk: int | None = None,
+    remove_result: bool = False,
+) -> None:
+    """
+    Unified entry point for CSV generation using different backends.
+
+    Parameters:
+        filename (str): The name of the file to be generated.
+        header (list[str]): The header row of the CSV file.
+        target_size (int): The target size of the file in bytes.
+        backend (Literal["faker", "numpy"]): The backend to use for generation. Defaults to "numpy".
+        n_workers (int | None): The number of workers to use for generation. Defaults to the number of CPU cores.
+        rows_per_chunk (int | None): The number of rows to generate per chunk. Defaults to a value based on the available RAM.
+        remove_result (bool): Whether to remove the generated file after completion. Defaults to False.
+
+    Returns:
+        None
+    """
+
+    logger.success(f"🚀 Starting CSV generation with backend={backend}")
+    final_path: Path = (Path(__file__).parents[3] / filename).resolve()
+
+    if not n_workers:
+        n_workers = multiprocessing.cpu_count()
+
+    avg_row_size = estimate_row_size(backend)
+    est_rows = int(target_size / avg_row_size)
+
+    if not rows_per_chunk:
+        total_ram = psutil.virtual_memory().available
+        max_ram = int(total_ram * 0.25)
+        rows_per_chunk = min(int(max_ram / avg_row_size), est_rows, 250_000)
+
+    if backend == "numpy":
+        chunk_fn, batch_fn = generate_chunk_numpy, generate_batch_numpy
+    else:
+        chunk_fn, batch_fn = generate_chunk_faker, generate_batch_faker
+
+    tmp_dir = tempfile.TemporaryDirectory(
+        prefix="csv_gen_", suffix="_chunks", delete=False
+    )
+    tmp_dir_path = Path(tmp_dir.name)
+
+    with ProcessPoolExecutor(max_workers=n_workers) as pool:
+        chunk_files, futures = schedule_chunks(
+            est_rows, rows_per_chunk, tmp_dir_path, pool, chunk_fn
+        )
+        for _ in tqdm(
+            as_completed(futures), total=len(futures), desc="Generating chunks"
+        ):
+            pass
+
+    merge_chunks(final_path, header, chunk_files)
+
+    _size = correct_size(
+        final_path,
+        target_size,
+        avg_row_size,
+        rows_per_chunk,
+        batch_fn,
+        est_rows,
+    )
+
+    truncate_if_oversize(final_path, target_size)
 
     tmp_dir.cleanup()
     logger.success(
