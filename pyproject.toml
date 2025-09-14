@@ -24,7 +24,7 @@ dependencies = [
 ]
 
 [project.scripts]
-csv-gen = "csv_gen.app.cli:cli"
+csv-gen = "csv_gen.__main__:cli"
 
 [dependency-groups]
 dev = [
