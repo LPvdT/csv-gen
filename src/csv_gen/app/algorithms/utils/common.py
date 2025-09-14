@@ -134,6 +134,30 @@ def correct_size(  # noqa
     batch_fn: Callable[[int, int], bytes],
     start_row: int,
 ) -> int:
+    """
+    Corrects the size of a file by appending rows until the target size is reached.
+
+    Parameters
+    ----------
+    final_path : Path
+        The path to the file to correct the size of.
+    target_size : int
+        The target size of the file in bytes.
+    avg_row_size : float
+        The estimated average size of a row in bytes.
+    rows_per_chunk : int
+        The number of rows to write per chunk.
+    batch_fn : Callable[[int, int], bytes]
+        The function to use for generating a batch of rows.
+    start_row : int
+        The starting row ID for generating the batch of rows.
+
+    Returns
+    -------
+    int
+        The final size of the file in bytes.
+    """
+
     size = final_path.stat().st_size
     if size < target_size:
         logger.info("File undersized, appending rows until target reached...")
