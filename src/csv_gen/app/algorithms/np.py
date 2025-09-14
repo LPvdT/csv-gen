@@ -55,7 +55,9 @@ def main_csv(  # noqa
     # Estimate rows needed
     avg_row_size = common.estimate_row_size(backend)
     est_rows = int(target_size / avg_row_size)
-    logger.info(f"Need about {est_rows:,} rows")
+    logger.debug(
+        f"Estimated rows: {est_rows:,} (~{target_size / (1024**3):.3f} GB | mean row size: {avg_row_size:.2f} bytes)"
+    )
 
     # Determine rows per chunk
     if not rows_per_chunk:
