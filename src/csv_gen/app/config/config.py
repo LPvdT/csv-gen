@@ -27,4 +27,13 @@ class Settings(BaseSettings):
 
 @functools.lru_cache
 def get_settings() -> Settings:
+    """
+    Retrieve the application settings.
+
+    This function is memoized to avoid redundant parsing of settings.
+
+    Returns:
+        Settings: The application settings.
+    """
+
     return Settings()
