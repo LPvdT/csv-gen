@@ -25,7 +25,6 @@ def build_row_faker(row_id: int) -> str:
     return (
         f"{row_id};{faker.name()};{faker.email()};"
         f"{faker.city()};{faker.random_int(0, 1_000_000)};"
-        f"{faker.pyfloat(left_digits=2, right_digits=6, positive=True):.6f}\n"
     )
 
 
