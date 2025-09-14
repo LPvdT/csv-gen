@@ -113,7 +113,7 @@ def merge_chunks(
         The list of paths to the chunk files to merge.
     """
 
-    logger.info(f"Merging {len(chunk_files)} chunks...")
+    logger.debug(f"Merging {len(chunk_files):,} chunks...")
     with final_path.open("wb", buffering=1024 * 1024) as out:
         out.write((";".join(header) + "\n").encode("utf-8"))
         for tmp_file in tqdm(
@@ -163,7 +163,7 @@ def correct_size(  # noqa
     if size < target_size:
         missing_bytes = target_size - size
         est_missing_rows = int(missing_bytes / avg_row_size) + 1
-        logger.info(
+        logger.debug(
             f"Missing ~{est_missing_rows:,} rows (~{missing_bytes / (1024**3):.2f} GB)"
         )
 
@@ -204,9 +204,9 @@ def truncate_if_oversize(final_path: Path, target_size: int) -> None:
 
     size = final_path.stat().st_size
     if size > target_size:
-        logger.info(
+        logger.debug(
             f"Oversize detected, truncating {size - target_size} bytes "
-            f"({size - target_size / (1024**3):.2f} GB) {size} -> {target_size}"
+            f"({(size - target_size) / (1024**3):.2f} GB): {size / (1024**3):.2f} GB -> {target_size / (1024**3):.2f} GB"
         )
         with final_path.open("rb+") as f:
             f.truncate(target_size)

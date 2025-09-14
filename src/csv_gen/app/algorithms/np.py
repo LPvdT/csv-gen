@@ -55,16 +55,14 @@ def main_csv(  # noqa
     # Estimate rows needed
     avg_row_size = common.estimate_row_size(backend)
     est_rows = int(target_size / avg_row_size)
-    logger.info(
-        f"Need about {est_rows:,} rows (~{target_size / (1024**3):.2f} GB target)"
-    )
+    logger.info(f"Need about {est_rows:,} rows")
 
     # Determine rows per chunk
     if not rows_per_chunk:
         total_ram = psutil.virtual_memory().available
         max_ram = int(total_ram * 0.25)
         rows_per_chunk = min(int(max_ram / avg_row_size), est_rows, 250_000)
-    logger.info(f"Rows per chunk: {rows_per_chunk}")
+    logger.info(f"Rows per chunk: {rows_per_chunk:,}")
 
     # Select backend
     if backend == "numpy":
@@ -83,7 +81,7 @@ def main_csv(  # noqa
         prefix="csv_gen_", suffix="_chunks", delete=False
     )
     tmp_dir_path = Path(tmp_dir.name)
-    logger.info(f"Temporary directory: {tmp_dir_path}")
+    logger.debug(f"Temporary directory: {tmp_dir_path}")
 
     # Generate chunks
     with ProcessPoolExecutor(max_workers=n_workers) as pool:
