@@ -11,13 +11,12 @@ from csv_gen.app.algorithms.utils.np_utils import (
     build_rows_bytes,
     random_words_bytes,
 )
+from csv_gen.app.algorithms.utils.rng import GENERATOR
 from csv_gen.app.config import logger
 
 if TYPE_CHECKING:
     from collections.abc import Callable
     from concurrent.futures import Future, ProcessPoolExecutor
-
-GENERATOR: np.random.Generator = np.random.default_rng()
 
 
 def estimate_row_size(backend: str, sample_size: int = 1000) -> float:

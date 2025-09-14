@@ -4,7 +4,7 @@ from pathlib import Path
 
 import numpy as np
 
-from csv_gen.app.algorithms.utils.common import GENERATOR
+from csv_gen.app.algorithms.utils.rng import GENERATOR
 
 
 def random_words_bytes(count: int, length: int) -> np.ndarray:
