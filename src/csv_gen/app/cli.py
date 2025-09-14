@@ -26,7 +26,7 @@ def generate(
     ] = "numpy",
 ) -> None:
     """
-    > Generate a large `CSV` file using a _custom algorithm based on NumPy_.
+    Generate a large `CSV` file using a specified algorithm.
 
     Args:
         file_name (str, optional): The name of the generated file
