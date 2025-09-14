@@ -81,6 +81,7 @@ def schedule_chunks(
         A tuple containing the list of chunk files and the list of futures.
     """
 
+    logger.info("Generating chunk files...")
     chunk_files: list[str] = []
     futures: list[Future[str]] = []
     row_id, chunk_id = 0, 0
@@ -112,6 +113,7 @@ def merge_chunks(
         The list of paths to the chunk files to merge.
     """
 
+    logger.info(f"Merging {len(chunk_files)} chunks...")
     with final_path.open("wb", buffering=1024 * 1024) as out:
         out.write((";".join(header) + "\n").encode("utf-8"))
         for tmp_file in tqdm(
@@ -159,9 +161,11 @@ def correct_size(  # noqa
 
     size = final_path.stat().st_size
     if size < target_size:
-        logger.info("File undersized, appending rows until target reached...")
         missing_bytes = target_size - size
         est_missing_rows = int(missing_bytes / avg_row_size) + 1
+        logger.info(
+            f"Missing ~{est_missing_rows:,} rows (~{missing_bytes / (1024**3):.2f} GB)"
+        )
 
         with (
             final_path.open("ab", buffering=1024 * 1024) as out,
@@ -200,6 +204,9 @@ def truncate_if_oversize(final_path: Path, target_size: int) -> None:
 
     size = final_path.stat().st_size
     if size > target_size:
-        logger.info(f"Oversize detected, truncating {size - target_size} bytes")
+        logger.info(
+            f"Oversize detected, truncating {size - target_size} bytes "
+            f"({size - target_size / (1024**3):.2f} GB) {size} -> {target_size}"
+        )
         with final_path.open("rb+") as f:
             f.truncate(target_size)
