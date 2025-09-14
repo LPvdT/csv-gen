@@ -31,7 +31,8 @@ def generate(
     Args:
         file_name (str, optional): The name of the generated file
         file_size_gb (int, optional): The size of the generated file in bytes _(default is a gigabyte: `1 * 1024**3`)_
-        cpus (int | None, optional): The number of CPUs to use for generation _(uses all cores when None)_
+        cpus (int | None, optional): The number of CPUs to use for generation _(uses all cores when `None`)_
+        algorithm (Literal["faker", "numpy"], optional): The algorithm to use, either `faker` or `numpy`
     """
 
     main_csv(
