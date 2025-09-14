@@ -9,7 +9,7 @@ CSV Gen is a Python project that provides a command-line interface (`CLI`) to ge
 
 To install the project, you can use `uv`:
 
-```shell
+```bash
 uv sync --managed-python --all-groups --compile-bytecode
 ```
 
@@ -17,7 +17,7 @@ uv sync --managed-python --all-groups --compile-bytecode
 
 You can use the following command to generate a large CSV file:
 
-```shell
+```bash
 csv-gen generate -s SIZE_BYTES -w NUM_CPUS [FILENAME]
 ```
 
@@ -29,15 +29,17 @@ Where:
 
 Or simply run the following to display the **help menu**:
 
-```shell
+```bash
 csv-gen generate --help
 ```
+
+> ![Help Example](src/csv_gen/static/help.png)
 
 ### Example
 
 For example, to generate a 25 GB CSV file (`25 * 1024**3 = 26843545600`) called `output.csv`, using 8 CPU cores, you can use:
 
-```shell
+```bash
 # The verbose version
 csv-gen generate --file-size-gb 26843545600 --cpus 8 output.csv
 
@@ -45,12 +47,14 @@ csv-gen generate --file-size-gb 26843545600 --cpus 8 output.csv
 csv-gen generate -s 26843545600 -w 8 output.csv
 ```
 
-To generate a 1 GB CSV file, called `bigfile.csv`, utilising all available CPU cores, you can simply call the default command:
+To generate a 1 GB CSV file, called `generated.csv`, utilising all available CPU cores, you can simply call the default command:
 
-```shell
+```bash
 csv-gen generate
 ```
 
+> ![Generate Default](src/csv_gen/static/generate.png)
+
 ## License
 
-This project is licensed under the terms of the MIT license.
+This project is licensed under the terms of the [MIT](LICENSE) license.

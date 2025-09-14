@@ -7,13 +7,21 @@ from pathlib import Path
 from typing import Final
 from warnings import deprecated
 
-from loguru import logger
+from csv_gen.app.config import logger
 
 
+@deprecated(
+    "No longer supported",
+    category=DeprecationWarning,
+)
 def _random_word(length: int = 10) -> str:
     return "".join(secrets.choice(string.ascii_letters) for _ in range(length))
 
 
+@deprecated(
+    "No longer supported",
+    category=DeprecationWarning,
+)
 def _make_row(row_id: int) -> list[str | int | float]:
     return [
         row_id,
@@ -24,6 +32,10 @@ def _make_row(row_id: int) -> list[str | int | float]:
     ]
 
 
+@deprecated(
+    "No longer supported",
+    category=DeprecationWarning,
+)
 def run_worker(
     start_id: int, count: int, filename: str, header: list[str]
 ) -> None:
@@ -39,7 +51,7 @@ def run_worker(
 
 
 @deprecated(
-    "No longer supported. Use csv_gen.utils.np instead.",
+    "No longer supported",
     category=DeprecationWarning,
 )
 def main_py(
