@@ -5,12 +5,13 @@ from cyclopts import App, Parameter, validators
 from csv_gen.app.algorithms import main_np
 from csv_gen.app.config.config import get_settings
 
+settings = get_settings()
 cli = App(help_format="markdown")
 
 
 @cli.command
 def generate(
-    file_name: str = "generated.csv",
+    file_name: str = settings.FILENAME,
     /,
     *,
     file_size_gb: Annotated[
@@ -28,5 +29,5 @@ def generate(
         file_size_gb (int, optional): The size of the generated file in bytes _(default is a gigabyte: `1 * 1024**3`)_
         cpus (int | None, optional): The number of CPUs to use for generation _(uses all cores when None)_
     """
-    settings = get_settings()
+
     main_np(file_name, settings.DEFAULT_HEADERS, file_size_gb, cpus)
