@@ -40,7 +40,7 @@ def main_csv(  # noqa
     """
 
     logger.success(f"🚀 Starting CSV generation with backend={backend}")
-    final_path: Path = (Path(__file__).parents[3] / filename).resolve()
+    final_path: Path = (Path(__file__).parents[4] / filename).resolve()
 
     if not n_workers:
         n_workers = multiprocessing.cpu_count()
