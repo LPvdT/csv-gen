@@ -1,9 +1,8 @@
 import functools
 import timeit
 
-from loguru import logger
-
-from csv_gen.app.algorithms import main_np
+from csv_gen.app.algorithms import main_csv
+from csv_gen.app.config import logger
 from csv_gen.app.config.config import get_settings
 
 if __name__ == "__main__":
@@ -34,6 +33,6 @@ if __name__ == "__main__":
         "target_size": 50 * 1024**3,  # 50 GB
     })
 
-    np_algo_config_1 = functools.partial(main_np, **args_1)
+    np_algo_config_1 = functools.partial(main_csv, **args_1)
     time_np = timeit.timeit(np_algo_config_1, number=1)
     logger.info(f"NumPy: {time_np:.2f} s")
