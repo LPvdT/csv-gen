@@ -7,7 +7,7 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    FILENAME: str = Field(default="bigfile.csv", description="CSV file name")
+    FILENAME: str = Field(default="generated.csv", description="CSV file name")
     DEFAULT_HEADERS: list[str] = Field(
         default=[
             "id",
