@@ -1,3 +1,7 @@
-from .np import main_np
+"""
+CSV generation algorithms.
+"""
 
-__all__ = ["main_np"]
+from .np import main_csv
+
+__all__ = ["main_csv"]
