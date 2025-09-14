@@ -3,7 +3,7 @@ name = "csv-gen"
 dynamic = [
     "version",
 ]
-description = "Generate CSV files with fake data"
+description = "Generate CSV files of arbitrary size with randomly generated fake data"
 license = { file = "LICENSE" }
 readme = "README.md"
 authors = [
