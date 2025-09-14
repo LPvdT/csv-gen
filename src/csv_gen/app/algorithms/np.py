@@ -9,8 +9,9 @@ from typing import TYPE_CHECKING, Literal
 import numpy as np
 import psutil
 from faker import Faker
-from loguru import logger
 from tqdm.auto import tqdm
+
+from csv_gen.app.config import logger
 
 if TYPE_CHECKING:
     from collections.abc import Callable
