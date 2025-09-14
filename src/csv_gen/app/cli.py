@@ -22,10 +22,7 @@ def generate(
     ] = None,
     algorithm: Annotated[
         Literal["faker", "numpy"],
-        Parameter(
-            alias=["-a"],
-            validator=validators.LimitedChoice(),
-        ),
+        Parameter(alias=["-a"]),
     ] = "numpy",
 ) -> None:
     """
