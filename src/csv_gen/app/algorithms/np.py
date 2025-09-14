@@ -39,20 +39,34 @@ def main_csv(  # noqa
         None
     """
 
-    logger.success(f"🚀 Starting CSV generation with backend={backend}")
-    final_path: Path = (Path(__file__).parents[4] / filename).resolve()
+    logger.success(f"🚀 Starting CSV generation with: {backend=}")
 
+    # Resolve target filename
+    final_path: Path = (Path(__file__).parents[4] / filename).resolve()
+    logger.info(
+        f"Generating file: {final_path} (target size: {target_size / (1024**3):.2f} GB)"
+    )
+
+    # Determine number of workers
     if not n_workers:
         n_workers = multiprocessing.cpu_count()
+    logger.info(f"Number of workers: {n_workers}")
 
+    # Estimate rows needed
     avg_row_size = common.estimate_row_size(backend)
     est_rows = int(target_size / avg_row_size)
+    logger.info(
+        f"Need about {est_rows:,} rows (~{target_size / (1024**3):.2f} GB target)"
+    )
 
+    # Determine rows per chunk
     if not rows_per_chunk:
         total_ram = psutil.virtual_memory().available
         max_ram = int(total_ram * 0.25)
         rows_per_chunk = min(int(max_ram / avg_row_size), est_rows, 250_000)
+    logger.info(f"Rows per chunk: {rows_per_chunk}")
 
+    # Select backend
     if backend == "numpy":
         chunk_fn, batch_fn = (
             np_utils.generate_chunk_numpy,
@@ -64,22 +78,29 @@ def main_csv(  # noqa
             faker_utils.generate_batch_faker,
         )
 
+    # Setup temporary directory
     tmp_dir = tempfile.TemporaryDirectory(
         prefix="csv_gen_", suffix="_chunks", delete=False
     )
     tmp_dir_path = Path(tmp_dir.name)
+    logger.info(f"Temporary directory: {tmp_dir_path}")
 
+    # Generate chunks
     with ProcessPoolExecutor(max_workers=n_workers) as pool:
         chunk_files, futures = common.schedule_chunks(
             est_rows, rows_per_chunk, tmp_dir_path, pool, chunk_fn
         )
         for _ in tqdm(
-            as_completed(futures), total=len(futures), desc="Generating chunks"
+            as_completed(futures),
+            total=len(futures),
+            desc="Generating chunks",
+            dynamic_ncols=True,
+            leave=True,
         ):
             pass
 
+    # Merge chunks and correct if needed
     common.merge_chunks(final_path, header, chunk_files)
-
     _size = common.correct_size(
         final_path,
         target_size,
@@ -88,13 +109,14 @@ def main_csv(  # noqa
         batch_fn,
         est_rows,
     )
-
     common.truncate_if_oversize(final_path, target_size)
 
+    # Teardown
     tmp_dir.cleanup()
     logger.success(
         f"✨ Done! Final size: {final_path.stat().st_size / (1024**3):.2f} GB"
     )
 
     if remove_result:
+        logger.warning(f"Removing result file: {final_path}")
         final_path.unlink()
