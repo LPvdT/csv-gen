@@ -18,7 +18,12 @@ ALGORITHM="${ALGORITHM:-numpy}"        # Use numpy by default
 # Config hyperfine #
 ####################
 WARMUP_RUNS="${WARMUP_RUNS:=0}"                   # No warmup runs by default
-RUNS="${RUNS:=5}"                                 # 5 runs by default
+RUNS="${RUNS:=0}"                                 # Force the amount of runs, by default hyperfine will run at least 10 runs and measure for at least 3 seconds
+if [ "$RUNS" -gt 0 ]; then
+    runs="--runs $RUNS"
+else
+    runs=""
+fi
 USE_PARAMETER_LIST="${USE_PARAMETER_LIST:-false}" # Do not use parameter list by default
 ALGORITHM_LIST="numpy,faker"                      # Algorithm list for --parameter-list
 if ! $USE_PARAMETER_LIST; then
@@ -38,10 +43,9 @@ uuid=$(uuidgen --time)
 # Run benchmark
 if $USE_PARAMETER_LIST; then
 	echo "CPUs: $NUM_CPUS, $FILE_SIZE_BYTES bytes, algorithms: $ALGORITHM_LIST, generating: $tmpfile"
-	hyperfine --command-name "BENCHMARK - Algorithms: $ALGORITHM_LIST - CPUs: $NUM_CPUS - Bytes: $FILE_SIZE_BYTES" \
+	hyperfine --command-name "Algorithms: $ALGORITHM_LIST - CPUs: $NUM_CPUS - Bytes: $FILE_SIZE_BYTES" \
 		--warmup "$WARMUP_RUNS" \
-		--min-runs "$RUNS" \
-		--max-runs "$RUNS" \
+        $runs \
 		--cleanup "rm $tmpfile" \
 		--style full \
 		--shell "bash" \
@@ -50,10 +54,9 @@ if $USE_PARAMETER_LIST; then
 		"csv-gen generate --file-size-bytes $FILE_SIZE_BYTES --cpus $NUM_CPUS --algorithm {algorithm} $tmpfile"
 else
 	echo "CPUs: $NUM_CPUS, $FILE_SIZE_BYTES bytes, algorithm: $ALGORITHM, generating: $tmpfile"
-	hyperfine --command-name "BENCHMARK - Algorithm: $ALGORITHM - CPUs: $NUM_CPUS - Bytes: $FILE_SIZE_BYTES" \
+	hyperfine --command-name "Algorithm: $ALGORITHM - CPUs: $NUM_CPUS - Bytes: $FILE_SIZE_BYTES" \
 		--warmup "$WARMUP_RUNS" \
-		--min-runs "$RUNS" \
-		--max-runs "$RUNS" \
+        $runs \
 		--cleanup "rm $tmpfile" \
 		--style full \
 		--shell "bash" \
