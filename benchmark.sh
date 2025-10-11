@@ -32,6 +32,9 @@ tmpfile="$(mktemp).csv"
 output_dir="$(dirname "$(realpath "$0")")/src/csv_gen/logs/benchmarks"
 mkdir -p "$output_dir"
 
+# Generate a time-based UUID
+uuid=$(uuidgen --time)
+
 # Run benchmark
 if $USE_PARAMETER_LIST; then
 	echo "CPUs: $NUM_CPUS, $FILE_SIZE_BYTES bytes, algorithms: $ALGORITHM_LIST, generating: $tmpfile"
@@ -42,7 +45,7 @@ if $USE_PARAMETER_LIST; then
 		--cleanup "rm $tmpfile" \
 		--style full \
 		--shell "bash" \
-		--export-json "${output_dir}/${ALGORITHM}_${NUM_CPUS}_${FILE_SIZE_BYTES}.json" \
+		--export-json "${output_dir}/${ALGORITHM}_${NUM_CPUS}_${FILE_SIZE_BYTES}_${uuid}.json" \
 		--parameter-list algorithm "$ALGORITHM_LIST" \
 		"csv-gen generate --file-size-bytes $FILE_SIZE_BYTES --cpus $NUM_CPUS --algorithm {algorithm} $tmpfile"
 else
@@ -54,6 +57,6 @@ else
 		--cleanup "rm $tmpfile" \
 		--style full \
 		--shell "bash" \
-		--export-json "${output_dir}/${ALGORITHM}_${NUM_CPUS}_${FILE_SIZE_BYTES}.json" \
+		--export-json "${output_dir}/${ALGORITHM}_${NUM_CPUS}_${FILE_SIZE_BYTES}_${uuid}.json" \
 		"csv-gen generate --file-size-bytes $FILE_SIZE_BYTES --cpus $NUM_CPUS --algorithm $ALGORITHM $tmpfile"
 fi
