@@ -33,4 +33,5 @@ repos:
     hooks:
       - id: yamlfix
         name: YAML Fix
+        exclude: ^.github/
         args: [--config-file=pyproject.toml]
