@@ -54,7 +54,6 @@ if $USE_PARAMETER_LIST; then
 		--parameter-list algorithm "$ALGORITHM_LIST" \
 		"csv-gen generate --file-size-bytes $FILE_SIZE_BYTES --cpus $NUM_CPUS --algorithm {algorithm} $tmpfile"
 else
-	echo "CPUs: $NUM_CPUS, $FILE_SIZE_BYTES bytes, algorithm: $ALGORITHM, generating: $tmpfile"
 	hyperfine \
 		--warmup "$WARMUP_RUNS" \
 		$runs \
