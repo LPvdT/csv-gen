@@ -8,7 +8,6 @@ updates:
       day: sunday
       time: '10:00'
       timezone: Europe/Amsterdam
-
     target-branch: main
     pull-request-branch-name:
       separator: /
