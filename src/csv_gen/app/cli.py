@@ -14,7 +14,7 @@ def generate(
     file_name: str = settings.FILENAME,
     /,
     *,
-    file_size_gb: Annotated[
+    file_size_bytes: Annotated[
         int, Parameter(alias=["-s"], validator=validators.Number(gt=0))
     ] = 1 * 1024**3,
     cpus: Annotated[
@@ -30,7 +30,7 @@ def generate(
 
     Args:
         file_name (str, optional): The name of the generated file
-        file_size_gb (int, optional): The size of the generated file in bytes _(default is a gigabyte: `1 * 1024**3`)_
+        file_size_bytes (int, optional): The size of the generated file in bytes _(default is a gigabyte: `1 * 1024**3`)_
         cpus (int | None, optional): The number of CPUs to use for generation _(uses all cores when `None`)_
         algorithm (Literal["faker", "numpy"], optional): The algorithm to use, either `faker` or `numpy`
     """
@@ -38,7 +38,7 @@ def generate(
     main_csv(
         file_name,
         settings.DEFAULT_HEADERS,
-        file_size_gb,
+        file_size_bytes,
         algorithm,
         n_workers=cpus,
     )
