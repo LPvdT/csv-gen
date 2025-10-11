@@ -44,7 +44,6 @@ uuid=$(uuidgen --time)
 
 # Run benchmark
 if $USE_PARAMETER_LIST; then
-	echo "CPUs: $NUM_CPUS, $FILE_SIZE_BYTES bytes, algorithms: $ALGORITHM_LIST, generating: $tmpfile"
 	hyperfine \
 		--warmup "$WARMUP_RUNS" \
 		$runs \
