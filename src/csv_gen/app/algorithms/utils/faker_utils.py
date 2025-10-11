@@ -1,3 +1,4 @@
+# TODO: Try to optimize; very slow
 from __future__ import annotations
 
 from pathlib import Path
