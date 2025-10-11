@@ -22,7 +22,7 @@ repos:
     hooks:
       - id: ruff-check
         name: Ruff - Check
-        args: [--fix, --config=pyproject.toml, --exit-zero, --unsafe-fixes]
+        args: [--fix, --config=pyproject.toml, --unsafe-fixes]
 
       - id: ruff-format
         name: Ruff - Format
