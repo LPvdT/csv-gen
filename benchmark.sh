@@ -10,7 +10,7 @@ fi
 # Config csv-gen #
 ##################
 # FILE_SIZE_BYTES=26843545600            # 25 * 1024**3 (25 GB)
-FILE_SIZE_BYTES=5368709120             # 5 * 1024**3 (5 GB)
+FILE_SIZE_BYTES=1073741824             # 1 * 1024**3 (1 GB)
 NUM_CPUS="${NUM_CPUS:-$(nproc --all)}" # Use all available CPUs by default
 ALGORITHM="${ALGORITHM:-numpy}"        # Use numpy by default
 
@@ -28,6 +28,10 @@ fi
 # Temporary file for CSV data
 tmpfile="$(mktemp).csv"
 
+# Create benchmarks directory
+output_dir="$(dirname "$(realpath "$0")")/src/csv_gen/logs/benchmarks"
+mkdir -p "$output_dir"
+
 # Run benchmark
 if $USE_PARAMETER_LIST; then
 	echo "CPUs: $NUM_CPUS, $FILE_SIZE_BYTES bytes, algorithms: $ALGORITHM_LIST, generating: $tmpfile"
@@ -38,7 +42,7 @@ if $USE_PARAMETER_LIST; then
 		--cleanup "rm $tmpfile" \
 		--style full \
 		--shell "bash" \
-		--export-json "${ALGORITHM}_${NUM_CPUS}_${FILE_SIZE_BYTES}.json" \
+		--export-json "${output_dir}/${ALGORITHM}_${NUM_CPUS}_${FILE_SIZE_BYTES}.json" \
 		--parameter-list algorithm "$ALGORITHM_LIST" \
 		"csv-gen generate --file-size-bytes $FILE_SIZE_BYTES --cpus $NUM_CPUS --algorithm {algorithm} $tmpfile"
 else
@@ -50,6 +54,6 @@ else
 		--cleanup "rm $tmpfile" \
 		--style full \
 		--shell "bash" \
-		--export-json "${ALGORITHM}_${NUM_CPUS}_${FILE_SIZE_BYTES}.json" \
+		--export-json "${output_dir}/${ALGORITHM}_${NUM_CPUS}_${FILE_SIZE_BYTES}.json" \
 		"csv-gen generate --file-size-bytes $FILE_SIZE_BYTES --cpus $NUM_CPUS --algorithm $ALGORITHM $tmpfile"
 fi
