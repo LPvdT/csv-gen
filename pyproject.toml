@@ -24,6 +24,7 @@ dependencies = [
 
 [project.scripts]
 csv-gen = "csv_gen.__main__:cli"
+advanced-statistics = "csv_gen.scripts.advanced_statistics:main"
 
 [dependency-groups]
 dev = [
