@@ -11,7 +11,8 @@ fi
 ##################
 # FILE_SIZE_BYTES=26843545600            # 25 * 1024**3 (25 GB)
 # FILE_SIZE_BYTES=1073741824             # 1 * 1024**3 (1 GB)
-FILE_SIZE_BYTES=104857600              # 100 * 1024**2 (100 MB)
+# FILE_SIZE_BYTES=104857600              # 100 * 1024**2 (100 MB)
+FILE_SIZE_BYTES=10485760               # 10 * 1024**2 (10 MB)
 NUM_CPUS="${NUM_CPUS:-$(nproc --all)}" # Use all available CPUs by default
 ALGORITHM="${ALGORITHM:-numpy}"        # Use numpy by default
 
@@ -44,7 +45,7 @@ uuid=$(uuidgen --time)
 # Run benchmark
 if $USE_PARAMETER_LIST; then
 	echo "CPUs: $NUM_CPUS, $FILE_SIZE_BYTES bytes, algorithms: $ALGORITHM_LIST, generating: $tmpfile"
-	hyperfine --command-name "Algorithms: $ALGORITHM_LIST - CPUs: $NUM_CPUS - Bytes: $FILE_SIZE_BYTES" \
+	hyperfine \
 		--warmup "$WARMUP_RUNS" \
 		$runs \
 		--cleanup "rm $tmpfile" \
@@ -55,7 +56,7 @@ if $USE_PARAMETER_LIST; then
 		"csv-gen generate --file-size-bytes $FILE_SIZE_BYTES --cpus $NUM_CPUS --algorithm {algorithm} $tmpfile"
 else
 	echo "CPUs: $NUM_CPUS, $FILE_SIZE_BYTES bytes, algorithm: $ALGORITHM, generating: $tmpfile"
-	hyperfine --command-name "Algorithm: $ALGORITHM - CPUs: $NUM_CPUS - Bytes: $FILE_SIZE_BYTES" \
+	hyperfine \
 		--warmup "$WARMUP_RUNS" \
 		$runs \
 		--cleanup "rm $tmpfile" \
