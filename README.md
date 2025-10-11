@@ -35,7 +35,7 @@ Or simply run the following to display the **help menu**:
 csv-gen generate --help
 ```
 
-> ![Help Example](src/csv_gen/static/help.png)
+> ![Help Example](./static/help.png)
 
 ### Examples
 
@@ -57,7 +57,7 @@ To generate a 1 GB CSV file, called `generated.csv`, utilising all available CPU
 csv-gen generate
 ```
 
-> ![Generate Default](src/csv_gen/static/generate.png)
+> ![Generate Default](./static/generate.png)
 
 #### Faker
 
