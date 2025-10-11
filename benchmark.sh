@@ -30,7 +30,7 @@ tmpfile="$(mktemp).csv"
 
 # Run benchmark
 if $USE_PARAMETER_LIST; then
-    echo "CPUs: $NUM_CPUS, $FILE_SIZE_BYTES bytes, algorithms: $ALGORITHM_LIST, generating: $tmpfile"
+	echo "CPUs: $NUM_CPUS, $FILE_SIZE_BYTES bytes, algorithms: $ALGORITHM_LIST, generating: $tmpfile"
 	hyperfine --name "Benchmark $ALGORITHM" \
 		--warmup "$WARMUP_RUNS" \
 		--min-runs "$RUNS" \
@@ -42,7 +42,7 @@ if $USE_PARAMETER_LIST; then
 		--parameter-list algorithm "$ALGORITHM_LIST" \
 		"./csv-gen generate --file-size-bytes $FILE_SIZE_BYTES --cpus $NUM_CPUS --algorithm {algorithm} $tmpfile"
 else
-    echo "CPUs: $NUM_CPUS, $FILE_SIZE_BYTES bytes, algorithm: $ALGORITHM, generating: $tmpfile"
+	echo "CPUs: $NUM_CPUS, $FILE_SIZE_BYTES bytes, algorithm: $ALGORITHM, generating: $tmpfile"
 	hyperfine --name "Benchmark $ALGORITHM" \
 		--warmup "$WARMUP_RUNS" \
 		--min-runs "$RUNS" \
