@@ -10,19 +10,20 @@ fi
 # Config csv-gen #
 ##################
 # FILE_SIZE_BYTES=26843545600            # 25 * 1024**3 (25 GB)
-FILE_SIZE_BYTES=1073741824             # 1 * 1024**3 (1 GB)
+# FILE_SIZE_BYTES=1073741824             # 1 * 1024**3 (1 GB)
+FILE_SIZE_BYTES=104857600              # 100 * 1024**2 (100 MB)
 NUM_CPUS="${NUM_CPUS:-$(nproc --all)}" # Use all available CPUs by default
 ALGORITHM="${ALGORITHM:-numpy}"        # Use numpy by default
 
 ####################
 # Config hyperfine #
 ####################
-WARMUP_RUNS="${WARMUP_RUNS:=0}"                   # No warmup runs by default
-RUNS="${RUNS:=0}"                                 # Force the amount of runs, by default hyperfine will run at least 10 runs and measure for at least 3 seconds
+WARMUP_RUNS="${WARMUP_RUNS:=0}" # No warmup runs by default
+RUNS="${RUNS:=0}"               # Force the amount of runs, by default hyperfine will run at least 10 runs and measure for at least 3 seconds
 if [ "$RUNS" -gt 0 ]; then
-    runs="--runs $RUNS"
+	runs="--runs $RUNS"
 else
-    runs=""
+	runs=""
 fi
 USE_PARAMETER_LIST="${USE_PARAMETER_LIST:-false}" # Do not use parameter list by default
 ALGORITHM_LIST="numpy,faker"                      # Algorithm list for --parameter-list
@@ -45,7 +46,7 @@ if $USE_PARAMETER_LIST; then
 	echo "CPUs: $NUM_CPUS, $FILE_SIZE_BYTES bytes, algorithms: $ALGORITHM_LIST, generating: $tmpfile"
 	hyperfine --command-name "Algorithms: $ALGORITHM_LIST - CPUs: $NUM_CPUS - Bytes: $FILE_SIZE_BYTES" \
 		--warmup "$WARMUP_RUNS" \
-        $runs \
+		$runs \
 		--cleanup "rm $tmpfile" \
 		--style full \
 		--shell "bash" \
@@ -56,7 +57,7 @@ else
 	echo "CPUs: $NUM_CPUS, $FILE_SIZE_BYTES bytes, algorithm: $ALGORITHM, generating: $tmpfile"
 	hyperfine --command-name "Algorithm: $ALGORITHM - CPUs: $NUM_CPUS - Bytes: $FILE_SIZE_BYTES" \
 		--warmup "$WARMUP_RUNS" \
-        $runs \
+		$runs \
 		--cleanup "rm $tmpfile" \
 		--style full \
 		--shell "bash" \
