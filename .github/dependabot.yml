@@ -31,4 +31,4 @@ updates:
       prefix: deps(uv)
     labels: [dependencies, uv]
     open-pull-requests-limit: 5
-    versioning-strategy: lockfile-only
+    versioning-strategy: auto
