@@ -31,7 +31,14 @@ dependencies = [
 
 [project.scripts]
 csv-gen = "csv_gen.__main__:cli"
+
 advanced-statistics = "csv_gen.scripts.advanced_statistics:main"
+benchmark-comparison = "csv_gen.scripts.benchmark_comparison:main"
+histogram = "csv_gen.scripts.histogram:main"
+parametrized = "csv_gen.scripts.parametrized:main"
+progression = "csv_gen.scripts.progression:main"
+welch-ttest = "csv_gen.scripts.welch_ttest:main"
+whisker = "csv_gen.scripts.whisker:main"
 
 [dependency-groups]
 dev = [
