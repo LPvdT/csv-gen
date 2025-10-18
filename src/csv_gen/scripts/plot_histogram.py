@@ -20,6 +20,7 @@ import sys
 import matplotlib.pyplot as plt
 import numpy as np
 from loguru import logger
+import pathlib
 
 logger.remove()
 logger.add(sys.stderr, level=logging.DEBUG)
@@ -68,7 +69,7 @@ parser.add_argument(
 
 args = parser.parse_args()
 
-with open(args.file) as f:
+with pathlib.Path(args.file).open(encoding="utf-8") as f:
     results = json.load(f)["results"]
 
 if args.labels:
@@ -85,7 +86,7 @@ t_max = (
 )
 
 bins = int(args.bins) if args.bins else "auto"
-histtype = args.type if args.type else "bar"
+histtype = args.type or "bar"
 
 plt.figure(figsize=(10, 5))
 plt.hist(
