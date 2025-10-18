@@ -90,3 +90,7 @@ def main() -> None:
             f"     P_25 .. P_75:    {p25:.3f} {unit_str} .. {p75:.3f} {unit_str}  (IQR = {iqr:.3f} {unit_str})"
         )
         logger.info("")
+
+
+if __name__ == "__main__":
+    main()
