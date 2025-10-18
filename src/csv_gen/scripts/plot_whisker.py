@@ -24,6 +24,7 @@ import sys
 
 import matplotlib.pyplot as plt
 from loguru import logger
+import pathlib
 
 logger.remove()
 logger.add(sys.stderr, level=logging.DEBUG)
@@ -39,7 +40,7 @@ parser.add_argument("-o", "--output", help="Save image to the given filename.")
 
 args = parser.parse_args()
 
-with open(args.file, encoding="utf-8") as f:
+with pathlib.Path(args.file).open(encoding="utf-8") as f:
     results = json.load(f)["results"]
 
 if args.labels:
@@ -59,7 +60,7 @@ boxplot = plt.boxplot(times, vert=True, patch_artist=True)
 cmap = plt.get_cmap("rainbow")
 colors = [cmap(val / len(times)) for val in range(len(times))]
 
-for patch, color in zip(boxplot["boxes"], colors):
+for patch, color in zip(boxplot["boxes"], colors, strict=False):
     patch.set_facecolor(color)
 
 if args.title:
