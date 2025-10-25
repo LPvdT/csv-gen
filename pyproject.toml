@@ -64,8 +64,8 @@ source = "vcs"
 
 [build-system]
 requires = [
-    "hatch-vcs",
-    "hatchling",
+    "hatch-vcs>=0.5.0",
+    "hatchling>=1.27.0",
 ]
 build-backend = "hatchling.build"
 
