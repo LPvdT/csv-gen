@@ -32,5 +32,3 @@ updates:
     labels: [dependencies, uv]
     open-pull-requests-limit: 5
     versioning-strategy: auto
-    ignore:
-      - dependency-name: csv-gen
