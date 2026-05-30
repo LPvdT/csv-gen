@@ -42,7 +42,7 @@ whisker = "csv_gen.scripts.whisker:main"
 
 [dependency-groups]
 dev = [
-    "basedpyright>=1.39.5",
+    "basedpyright>=1.39.6",
     "hatch-vcs>=0.5.0",
     "hatchling>=1.27.0",
     "mccabe>=0.7.0",
